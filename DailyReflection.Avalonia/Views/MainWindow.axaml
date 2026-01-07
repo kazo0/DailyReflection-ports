@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:DailyReflection.Avalonia.Views"
+        x:Class="DailyReflection.Avalonia.Views.MainWindow"
+        Title="Daily Reflection"
+        Width="450"
+        Height="700"
+        MinWidth="350"
+        MinHeight="500">
+    
+    <TabControl Classes="ShellTabs" TabStripPlacement="Bottom">
+        <TabItem Header="📖 Reflection">
+            <views:DailyReflectionView />
+        </TabItem>
+        <TabItem Header="⏱️ Sober Time">
+            <views:SobrietyTimeView />
+        </TabItem>
+        <TabItem Header="⚙️ Settings">
+            <views:SettingsView />
+        </TabItem>
+    </TabControl>
+</Window>

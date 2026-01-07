@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:DailyReflection.Avalonia.Converters"
+             xmlns:vm="clr-namespace:DailyReflection.Presentation.ViewModels;assembly=DailyReflection.Presentation"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="DailyReflection.Avalonia.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    
+    <UserControl.Resources>
+        <converters:DateTimeToTimeSpanConverter x:Key="DateTimeToTimeSpan" />
+        <converters:SoberTimeDisplayEnumConverter x:Key="SoberTimeDisplayEnumConverter" />
+    </UserControl.Resources>
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{StaticResource PrimaryBrush}"
+                Padding="12,8">
+            <TextBlock Text="Settings"
+                       Foreground="White"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+        </Border>
+        
+        <!-- Settings Content -->
+        <ScrollViewer Grid.Row="1" Padding="16">
+            <StackPanel Spacing="8">
+                
+                <!-- Daily Notifications Section -->
+                <TextBlock Text="Daily Notifications" Classes="SectionHeader" />
+                
+                <Border Classes="SettingsRow">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Enable Notifications"
+                                   VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}"
+                                      OnContent="" OffContent="" />
+                    </Grid>
+                </Border>
+                
+                <Border Classes="SettingsRow"
+                        PointerPressed="NotificationTime_PointerPressed"
+                        IsEnabled="{Binding NotificationsEnabled}">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <StackPanel>
+                            <TextBlock Text="Time" />
+                            <TextBlock Text="{Binding NotificationTime, StringFormat='{}{0:h:mm tt}'}"
+                                       Classes="Caption"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource Gray400Brush}" />
+                    </Grid>
+                </Border>
+                
+                <!-- Sobriety Time Section -->
+                <TextBlock Text="Sobriety Time" Classes="SectionHeader" />
+                
+                <Border Classes="SettingsRow"
+                        PointerPressed="SoberDate_PointerPressed">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <StackPanel>
+                            <TextBlock Text="Sober Date" />
+                            <TextBlock Text="{Binding SoberDate, StringFormat='{}{0:MMM d, yyyy}'}"
+                                       Classes="Caption"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource Gray400Brush}" />
+                    </Grid>
+                </Border>
+                
+                <Border Classes="SettingsRow"
+                        PointerPressed="SoberTimeDisplay_PointerPressed">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <StackPanel>
+                            <TextBlock Text="Sober Time Display" />
+                            <TextBlock Text="{Binding SoberTimeDisplayPreference, Converter={StaticResource SoberTimeDisplayEnumConverter}}"
+                                       Classes="Caption"
+                                       Margin="0,4,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource Gray400Brush}" />
+                    </Grid>
+                </Border>
+                
+                <!-- Hidden pickers -->
+                <CalendarDatePicker x:Name="SoberDatePicker"
+                                    IsVisible="False"
+                                    SelectedDate="{Binding SoberDate, Mode=TwoWay}" />
+                
+                <TimePicker x:Name="TimePicker"
+                            IsVisible="False"
+                            SelectedTime="{Binding NotificationTime, Mode=TwoWay, Converter={StaticResource DateTimeToTimeSpan}}" />
+                
+                <ComboBox x:Name="SoberTimeDisplayPicker"
+                          IsVisible="False"
+                          ItemsSource="{Binding AllSoberTimeDisplayPreferences}"
+                          SelectedItem="{Binding SoberTimeDisplayPreference, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource SoberTimeDisplayEnumConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

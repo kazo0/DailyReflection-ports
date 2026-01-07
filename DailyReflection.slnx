@@ -9,4 +9,5 @@
   <Project Path="DailyReflection/DailyReflection.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
+  <Project Path="DailyReflection.Avalonia/DailyReflection.Avalonia.csproj" />
 </Solution>

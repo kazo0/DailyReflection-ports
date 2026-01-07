@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:DailyReflection.Avalonia.Converters"
+             xmlns:models="clr-namespace:DailyReflection.Data.Models;assembly=DailyReflection.Data"
+             xmlns:vm="clr-namespace:DailyReflection.Presentation.ViewModels;assembly=DailyReflection.Presentation"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="DailyReflection.Avalonia.Views.SobrietyTimeView"
+             x:DataType="vm:SobrietyTimeViewModel">
+    
+    <UserControl.Resources>
+        <converters:PluralityConverter x:Key="YearsPluralityConverter"
+                                       PluralValue="Years"
+                                       SingularValue="Year" />
+        <converters:PluralityConverter x:Key="MonthsPluralityConverter"
+                                       PluralValue="Months"
+                                       SingularValue="Month" />
+        <converters:PluralityConverter x:Key="DaysPluralityConverter"
+                                       PluralValue="Days"
+                                       SingularValue="Day" />
+        <converters:IsDisplayPreferenceToBoolConverter x:Key="IsDaysMonthsYearsDisplayPreferenceConverter"
+                                                       DisplayPreference="DaysMonthsYears" />
+        <converters:IsDisplayPreferenceToBoolConverter x:Key="IsDaysOnlyDisplayPreferenceConverter"
+                                                       DisplayPreference="DaysOnly" />
+        <converters:NullToBoolConverter x:Key="NullToBoolConverter" />
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+    </UserControl.Resources>
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{StaticResource PrimaryBrush}"
+                Padding="12,8">
+            <TextBlock Text="Sober Time"
+                       Foreground="White"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+        </Border>
+        
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <Grid RowDefinitions="20, Auto, *, Auto, Auto, *, Auto" Margin="20">
+                
+                <!-- Sober Date Display -->
+                <StackPanel Grid.Row="1"
+                            IsVisible="{Binding SoberDate, Converter={StaticResource NullToBoolConverter}}"
+                            HorizontalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="📅"
+                               FontSize="32"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding SoberDate, StringFormat='{}{0:MMM d, yyyy}'}"
+                               Classes="Title Center" />
+                </StackPanel>
+                
+                <!-- Sobriety Time Display -->
+                <Panel Grid.Row="3"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center">
+                    <Panel.IsVisible>
+                        <Binding Path="SoberDate" Converter="{StaticResource NullToBoolConverter}" />
+                    </Panel.IsVisible>
+                    
+                    <!-- Days/Months/Years Display -->
+                    <Grid ColumnDefinitions="Auto, *"
+                          ColumnSpacing="16"
+                          RowDefinitions="Auto, Auto, Auto"
+                          IsVisible="{Binding DisplayPreference, Converter={StaticResource IsDaysMonthsYearsDisplayPreferenceConverter}}">
+                        
+                        <!-- Years -->
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                   Text="{Binding SoberPeriod.Years}"
+                                   Classes="Title"
+                                   IsVisible="{Binding SoberPeriod.Years, Converter={StaticResource IntToBoolConverter}}" />
+                        <TextBlock Grid.Row="0" Grid.Column="1"
+                                   Text="{Binding SoberPeriod.Years, Converter={StaticResource YearsPluralityConverter}}"
+                                   Classes="Title"
+                                   HorizontalAlignment="Left"
+                                   IsVisible="{Binding SoberPeriod.Years, Converter={StaticResource IntToBoolConverter}}" />
+                        
+                        <!-- Months -->
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                   Text="{Binding SoberPeriod.Months}"
+                                   Classes="Title"
+                                   IsVisible="{Binding SoberPeriod.Months, Converter={StaticResource IntToBoolConverter}}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding SoberPeriod.Months, Converter={StaticResource MonthsPluralityConverter}}"
+                                   Classes="Title"
+                                   HorizontalAlignment="Left"
+                                   IsVisible="{Binding SoberPeriod.Months, Converter={StaticResource IntToBoolConverter}}" />
+                        
+                        <!-- Days -->
+                        <TextBlock Grid.Row="2" Grid.Column="0"
+                                   Text="{Binding SoberPeriod.Days}"
+                                   Classes="Title"
+                                   IsVisible="{Binding SoberPeriod.Days, Converter={StaticResource IntToBoolConverter}}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1"
+                                   Text="{Binding SoberPeriod.Days, Converter={StaticResource DaysPluralityConverter}}"
+                                   Classes="Title"
+                                   HorizontalAlignment="Left"
+                                   IsVisible="{Binding SoberPeriod.Days, Converter={StaticResource IntToBoolConverter}}" />
+                    </Grid>
+                    
+                    <!-- Days Only Display -->
+                    <Grid ColumnDefinitions="Auto, *"
+                          ColumnSpacing="16"
+                          IsVisible="{Binding DisplayPreference, Converter={StaticResource IsDaysOnlyDisplayPreferenceConverter}}">
+                        <TextBlock Text="{Binding TotalDaysSober}"
+                                   Classes="Title"
+                                   IsVisible="{Binding TotalDaysSober, Converter={StaticResource IntToBoolConverter}}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding TotalDaysSober, Converter={StaticResource DaysPluralityConverter}}"
+                                   Classes="Title"
+                                   HorizontalAlignment="Left"
+                                   IsVisible="{Binding TotalDaysSober, Converter={StaticResource IntToBoolConverter}}" />
+                    </Grid>
+                </Panel>
+                
+                <!-- Motivational Quote -->
+                <TextBlock Grid.Row="4"
+                           Text="One day at a time"
+                           Classes="Subtitle Italic Center"
+                           Margin="0,20,0,0" />
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
