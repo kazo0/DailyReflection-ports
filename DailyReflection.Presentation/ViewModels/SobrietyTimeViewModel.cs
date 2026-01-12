@@ -34,6 +34,8 @@ public partial class SobrietyTimeViewModel : ViewModelBase, IRecipient<SoberDate
 		SoberPeriod = GetSoberPeriod();
 		DisplayPreference = GetDisplayPreference();
 		TotalDaysSober = GetTotalDaysSober();
+
+		IsActive = true;
 	}
 
 	public void Receive(SoberDateChangedMessage message)

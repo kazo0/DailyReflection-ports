@@ -31,7 +31,7 @@ public partial class SettingsViewModel : ViewModelBase
 	[ObservableProperty]
 	private SoberTimeDisplayPreference _soberTimeDisplayPreference;
 
-	public DateTime MaxDate => DateTime.Today;
+	public DateTimeOffset MaxDate => DateTimeOffset.Now.Date;
 
 	public List<SoberTimeDisplayPreference> AllSoberTimeDisplayPreferences => Enum.GetValues(typeof(SoberTimeDisplayPreference)).Cast<SoberTimeDisplayPreference>().ToList();
 
@@ -86,11 +86,13 @@ public partial class SettingsViewModel : ViewModelBase
 
 	partial void OnSoberDateChanged(DateTime oldValue, DateTime newValue)
 	{
+		_settingsService.Set(PreferenceConstants.SoberDate, newValue);
 		WeakReferenceMessenger.Default.Send(new SoberDateChangedMessage(newValue));
 	}
 
 	partial void OnSoberTimeDisplayPreferenceChanged(SoberTimeDisplayPreference oldValue, SoberTimeDisplayPreference newValue)
 	{
+		_settingsService.Set(PreferenceConstants.SoberTimeDisplay, (int)newValue);
 		WeakReferenceMessenger.Default.Send(new SoberTimeDisplayPreferenceChangedMessage(newValue));
 	}
 }
