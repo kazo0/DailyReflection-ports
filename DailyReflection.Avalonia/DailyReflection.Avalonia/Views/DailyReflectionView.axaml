@@ -1,0 +1,118 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DailyReflection.Presentation.ViewModels"
+             xmlns:converters="using:DailyReflection.Avalonia.Converters"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="DailyReflection.Avalonia.Views.DailyReflectionView"
+             x:DataType="vm:DailyReflectionViewModel">
+    
+    <UserControl.Resources>
+        <converters:HtmlToTextConverter x:Key="HtmlToTextConverter" />
+        <converters:AllFalseMultiConverter x:Key="AllFalseConverter" />
+    </UserControl.Resources>
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Toolbar -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemAccentColor}"
+                Padding="16,8">
+            <Grid ColumnDefinitions="*, Auto, Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Date, StringFormat='{}{0:MMMM d}'}"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Foreground="White" />
+                <Button Grid.Column="1"
+                        Click="DatePicker_Click"
+                        Background="Transparent"
+                        ToolTip.Tip="Select Date"
+                        Margin="8,0">
+                    <PathIcon Data="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1" 
+                              Foreground="White" />
+                </Button>
+                <Button Grid.Column="2"
+                        Command="{Binding ShareCommand}"
+                        Background="Transparent"
+                        ToolTip.Tip="Share">
+                    <PathIcon Data="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.35C15.11,18.56 15.08,18.78 15.08,19C15.08,20.61 16.39,21.92 18,21.92C19.61,21.92 20.92,20.61 20.92,19C20.92,17.39 19.61,16.08 18,16.08Z" 
+                              Foreground="White" />
+                </Button>
+            </Grid>
+        </Border>
+        
+        <!-- Content -->
+        <Grid Grid.Row="1">
+            <ScrollViewer>
+                <StackPanel Margin="20">
+                    <StackPanel.IsVisible>
+                        <MultiBinding Converter="{StaticResource AllFalseConverter}">
+                            <Binding Path="HasError" />
+                            <Binding Path="GetDailyReflectionCommand.IsRunning" />
+                        </MultiBinding>
+                    </StackPanel.IsVisible>
+                    
+                    <!-- Title -->
+                    <TextBlock Text="{Binding DailyReflection.Title}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Margin="0,0,0,20" />
+                    
+                    <!-- Quote/Reading -->
+                    <TextBlock Text="{Binding DailyReflection.Reading, Converter={StaticResource HtmlToTextConverter}}"
+                               FontStyle="Italic"
+                               FontSize="16"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Margin="0,0,0,8" />
+                    
+                    <!-- Source -->
+                    <TextBlock Text="{Binding DailyReflection.Source, StringFormat='— {0}'}"
+                               FontSize="14"
+                               Opacity="0.7"
+                               Margin="0,0,0,20" />
+                    
+                    <!-- Thought -->
+                    <TextBlock Text="{Binding DailyReflection.Thought, Converter={StaticResource HtmlToTextConverter}}"
+                               FontSize="16"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,20" />
+                    
+                    <!-- Copyright -->
+                    <TextBlock FontSize="12"
+                               Opacity="0.6"
+                               TextWrapping="Wrap">
+                        <Run Text="From the book " />
+                        <Run Text="Daily Reflections" FontStyle="Italic" />
+                        <LineBreak />
+                        <Run Text="Copyright © 1990 by Alcoholics Anonymous World Services, Inc." />
+                    </TextBlock>
+            </StackPanel>
+            </ScrollViewer>
+            
+            <!-- Error State -->
+            <TextBlock Text="An error occurred. Please try again."
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding HasError}" />
+            
+            <!-- Loading State -->
+            <ProgressBar Width="100"
+                         Height="4"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         IsIndeterminate="True"
+                         IsVisible="{Binding GetDailyReflectionCommand.IsRunning}" />
+        </Grid>
+        
+        <!-- Hidden DatePicker for date selection -->
+        <CalendarDatePicker x:Name="DatePickerControl"
+                            IsVisible="False"
+                            SelectedDateChanged="DatePickerControl_SelectedDateChanged" />
+    </Grid>
+</UserControl>

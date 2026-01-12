@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:DailyReflection.Presentation.ViewModels"
+             xmlns:converters="using:DailyReflection.Avalonia.Converters"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="DailyReflection.Avalonia.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    
+    <UserControl.Resources>
+        <converters:SoberTimeDisplayEnumConverter x:Key="SoberTimeDisplayEnumConverter" />
+    </UserControl.Resources>
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemAccentColor}"
+                Padding="16,8">
+            <TextBlock Text="Settings"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="White" />
+        </Border>
+        
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="20" Spacing="24">
+                
+                <!-- Daily Notifications Section -->
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Daily Notifications"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SystemAccentColor}" />
+                    
+                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="16">
+                            <!-- Enable Notifications -->
+                            <Grid ColumnDefinitions="*, Auto">
+                                <TextBlock Text="Enable Notifications"
+                                           VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}"
+                                              OnContent=""
+                                              OffContent="" />
+                            </Grid>
+                            
+                            <!-- Notification Time -->
+                            <Grid ColumnDefinitions="*, Auto"
+                                  IsEnabled="{Binding NotificationsEnabled}">
+                                <StackPanel>
+                                    <TextBlock Text="Time" />
+                                    <TextBlock Text="{Binding NotificationTime, StringFormat='{}{0:h:mm tt}'}"
+                                               Opacity="0.7"
+                                               FontSize="12" />
+                                </StackPanel>
+                                <TimePicker Grid.Column="1"
+                                            SelectedTime="{Binding NotificationTime.TimeOfDay, Mode=TwoWay}"
+                                            ClockIdentifier="12HourClock"
+                                            MinWidth="150" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                
+                <!-- Sobriety Time Section -->
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Sobriety Time"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource SystemAccentColor}" />
+                    
+                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="16">
+                            <!-- Sober Date -->
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Sober Date" />
+                                    <TextBlock Text="{Binding SoberDate, StringFormat='{}{0:MMM d, yyyy}'}"
+                                               Opacity="0.7"
+                                               FontSize="12" />
+                                </StackPanel>
+                                <CalendarDatePicker Grid.Column="1"
+                                                    SelectedDate="{Binding SoberDate, Mode=TwoWay}"
+                                                    DisplayDate="{Binding SoberDate}"
+                                                    MinWidth="150" />
+                            </Grid>
+                            
+                            <!-- Sober Time Display Preference -->
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Sober Time Display" />
+                                    <TextBlock Text="{Binding SoberTimeDisplayPreference, Converter={StaticResource SoberTimeDisplayEnumConverter}}"
+                                               Opacity="0.7"
+                                               FontSize="12" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding AllSoberTimeDisplayPreferences}"
+                                          SelectedItem="{Binding SoberTimeDisplayPreference, Mode=TwoWay}"
+                                          MinWidth="150">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource SoberTimeDisplayEnumConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
