@@ -43,9 +43,11 @@ public partial class MainViewModel : ViewModelBase
     {
         if (_reflectionView == null)
         {
+            var vm = _serviceProvider.GetRequiredService<DailyReflectionViewModel>();
+            vm.IsActive = true;
             _reflectionView = new DailyReflectionView
             {
-                DataContext = _serviceProvider.GetRequiredService<DailyReflectionViewModel>()
+                DataContext = vm
             };
         }
         return _reflectionView;
@@ -55,9 +57,11 @@ public partial class MainViewModel : ViewModelBase
     {
         if (_sobrietyTimeView == null)
         {
-            _sobrietyTimeView = new SobrietyTimeView
+			var vm = _serviceProvider.GetRequiredService<SobrietyTimeViewModel>();
+			vm.IsActive = true;
+			_sobrietyTimeView = new SobrietyTimeView
             {
-                DataContext = _serviceProvider.GetRequiredService<SobrietyTimeViewModel>()
+                DataContext = vm
             };
         }
         return _sobrietyTimeView;
@@ -67,9 +71,11 @@ public partial class MainViewModel : ViewModelBase
     {
         if (_settingsView == null)
         {
-            _settingsView = new SettingsView
+			var vm = _serviceProvider.GetRequiredService<SettingsViewModel>();
+			vm.IsActive = true;
+			_settingsView = new SettingsView
             {
-                DataContext = _serviceProvider.GetRequiredService<SettingsViewModel>()
+                DataContext = vm
             };
         }
         return _settingsView;

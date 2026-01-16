@@ -16,6 +16,7 @@ public sealed partial class SobrietyTimePage : Page
     {
         ViewModel = App.GetService<SobrietyTimeViewModel>();
         this.InitializeComponent();
+        ViewModel.IsActive = true;
         this.DataContext = ViewModel;
 
         Unloaded += OnUnloaded;

@@ -23,6 +23,7 @@ public sealed partial class SettingsPage : Page
     {
         ViewModel = App.GetService<SettingsViewModel>();
         this.InitializeComponent();
+        ViewModel.IsActive = true;
         this.DataContext = ViewModel;
     }
 

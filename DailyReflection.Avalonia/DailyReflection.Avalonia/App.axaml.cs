@@ -13,6 +13,7 @@ using DailyReflection.Services.Share;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -59,8 +60,7 @@ public partial class App : Application
     {
         // Add configuration
         var configuration = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+			.AddInMemoryCollection([new KeyValuePair<string, string>("DatabaseFileName", "dailyreflections.db")])
             .Build();
         
         services.AddSingleton<IConfiguration>(configuration);

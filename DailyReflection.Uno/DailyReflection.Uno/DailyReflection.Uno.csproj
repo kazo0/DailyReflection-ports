@@ -11,7 +11,7 @@
     <!-- Display name -->
     <ApplicationTitle>DailyReflection</ApplicationTitle>
     <!-- App Identifier -->
-    <ApplicationId>com.kazo0.dailyreflection</ApplicationId>
+    <ApplicationId>com.kazo0.dailyreflection-uno</ApplicationId>
     <!-- Versions -->
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
