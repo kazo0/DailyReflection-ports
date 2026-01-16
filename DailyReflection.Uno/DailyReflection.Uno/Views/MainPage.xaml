@@ -18,7 +18,7 @@
 	  xmlns:utu="using:Uno.Toolkit.UI"
 	  Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-	<Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto" utu:SafeArea.Insets="VisibleBounds">
 		<!-- Content Area - displays the selected page -->
 		<Frame x:Name="ContentFrame"
 			   Grid.Row="0" />

@@ -16,6 +16,7 @@ public sealed partial class DailyReflectionPage : Page
     {
         ViewModel = App.GetService<DailyReflectionViewModel>();
         this.InitializeComponent();
+        ViewModel.IsActive = true;
         this.DataContext = ViewModel;
 
         // Load reflection when page is loaded
@@ -32,40 +33,21 @@ public sealed partial class DailyReflectionPage : Page
     }
 
     /// <summary>
-    /// Shows the calendar flyout for date selection.
-    /// Replaces MAUI toolbar calendar button behavior.
-    /// </summary>
-    private void CalendarButton_Click(object sender, RoutedEventArgs e)
-    {
-        DatePicker.Visibility = Visibility.Visible;
-        DatePicker.IsCalendarOpen = true;
-    }
-
-    /// <summary>
-    /// Handles date selection from the CalendarDatePicker.
-    /// </summary>
-    private async void DatePicker_DateChanged(CalendarDatePicker sender, CalendarDatePickerDateChangedEventArgs args)
-    {
-        if (args.NewDate.HasValue)
-        {
-            ViewModel.Date = args.NewDate.Value.DateTime;
-            
-            if (ViewModel.GetDailyReflectionCommand.CanExecute(null))
-            {
-                await ViewModel.GetDailyReflectionCommand.ExecuteAsync(null);
-            }
-        }
-        
-        // Hide the date picker after selection
-        DatePicker.Visibility = Visibility.Collapsed;
-    }
-
-    /// <summary>
     /// Helper method for x:Bind to calculate content visibility.
     /// Content is visible when not loading and no error.
     /// </summary>
     public Visibility ShowContent(bool hasError, bool isLoading)
     {
         return (!hasError && !isLoading) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void DatePickerFlyout_DatePicked(DatePickerFlyout sender, DatePickedEventArgs args)
+    {
+        ViewModel.Date = args.NewDate.DateTime;
+
+        if (ViewModel.GetDailyReflectionCommand.CanExecute(null))
+        {
+            await ViewModel.GetDailyReflectionCommand.ExecuteAsync(null);
+        }
     }
 }
