@@ -1,12 +1,29 @@
 <Solution>
+  <Folder Name="/Avalonia/">
+    <Project Path="DailyReflection.Avalonia/DailyReflection.Avalonia.Android/DailyReflection.Avalonia.Android.csproj" Id="668e834d-0597-40ea-a44a-789cefb0decf">
+      <Deploy />
+    </Project>
+    <Project Path="DailyReflection.Avalonia/DailyReflection.Avalonia.Browser/DailyReflection.Avalonia.Browser.csproj" Id="efb5f435-2eae-4f2f-92f6-0fe1907e2911" />
+    <Project Path="DailyReflection.Avalonia/DailyReflection.Avalonia.Desktop/DailyReflection.Avalonia.Desktop.csproj" Id="b7fa497c-ca10-49fd-af48-be0df09c9624" />
+    <Project Path="DailyReflection.Avalonia/DailyReflection.Avalonia.iOS/DailyReflection.Avalonia.iOS.csproj" Id="526c2c61-ecff-40e9-bc12-110eda792492">
+      <Deploy />
+    </Project>
+    <Project Path="DailyReflection.Avalonia/DailyReflection.Avalonia/DailyReflection.Avalonia.csproj" Id="0e815222-c535-4367-afc4-094f23ba79c8" />
+  </Folder>
+  <Folder Name="/MAUI/">
+    <Project Path="DailyReflection/DailyReflection.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/Uno/">
+    <Project Path="DailyReflection.Uno/DailyReflection.Uno/DailyReflection.Uno.csproj" />
   </Folder>
   <Project Path="DailyReflection.Core/DailyReflection.Core.csproj" />
   <Project Path="DailyReflection.Data/DailyReflection.Data.csproj" />
   <Project Path="DailyReflection.Presentation/DailyReflection.Presentation.csproj" />
   <Project Path="DailyReflection.Services/DailyReflection.Services.csproj" />
-  <Project Path="DailyReflection/DailyReflection.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
 </Solution>
