@@ -29,6 +29,7 @@
       Hosting;
       Toolkit;
       Configuration;
+      Navigation;
     </UnoFeatures>
   </PropertyGroup>
 
