@@ -11,16 +11,17 @@ using DailyReflection.Presentation.ViewModels;
 using DailyReflection.Views;
 using System.Reflection;
 using Uno.Resizetizer;
+using Uno.Extensions.Navigation;
 
 namespace DailyReflection;
 
 /// <summary>
 /// Daily Reflection app for Uno Platform.
 /// Migrated from .NET MAUI with the following key changes:
-/// - Shell navigation replaced with TabBar from Uno.Toolkit
+/// - Shell navigation replaced with TabBar from Uno.Toolkit using Region-based navigation (Uno.Extensions.Navigation)
 /// - Preferences replaced with ApplicationData.LocalSettings (Uno Docs: features/settings.md)
 /// - Share replaced with DataTransferManager (Uno Docs: features/windows-applicationmodel-datatransfer.md)
-/// - DI configured via Uno.Extensions.Hosting (Uno Docs: HostingSetup.howto.md)
+/// - DI configured via Uno.Extensions.Hosting with UseToolkitNavigation for TabBar region support
 /// </summary>
 public partial class App : Application
 {
@@ -70,59 +71,75 @@ public partial class App : Application
             config = new ConfigurationBuilder().Build();
         }
 
-        // Build DI container
-        var services = new ServiceCollection();
-        
-        // Add configuration
-        services.AddSingleton<IConfiguration>(config);
-        
-        // Add services from shared projects
-        services.AddSingleton<IDailyReflectionDatabase, DailyReflection.Data.Databases.DailyReflectionDatabase>();
-        services.AddTransient<IDailyReflectionService, DailyReflectionService>();
-        
-        // Add platform-specific services (Uno implementations)
-        services.AddSingleton<ISettingsService, PlatformServices.SettingsService>();
-        services.AddSingleton<IShareService, PlatformServices.ShareService>();
-        services.AddTransient<INotificationService, PlatformServices.NotificationService>();
-        
-        // Add ViewModels from shared Presentation project
-        services.AddSingleton<DailyReflectionViewModel>();
-        services.AddSingleton<SettingsViewModel>();
-        services.AddSingleton<SobrietyTimeViewModel>();
-        
-        // Add Pages/Views
-        services.AddTransient<MainPage>();
-        services.AddTransient<DailyReflectionPage>();
-        services.AddTransient<SettingsPage>();
-        services.AddTransient<SobrietyTimePage>();
-        
-        ServiceProvider = services.BuildServiceProvider();
+        // Use Uno.Extensions builder for Navigation support
+        // Based on Uno Platform Docs: HowTo-HostingSetup.md, HowTo-UseTabBar.md
+        var builder = this.CreateBuilder(args)
+            // Add navigation support for toolkit controls such as TabBar
+            .UseToolkitNavigation()
+            .Configure(host => host
+                .ConfigureServices((context, services) =>
+                {
+                    // Add configuration
+                    services.AddSingleton<IConfiguration>(config);
+                    
+                    // Add services from shared projects
+                    services.AddSingleton<IDailyReflectionDatabase, DailyReflection.Data.Databases.DailyReflectionDatabase>();
+                    services.AddTransient<IDailyReflectionService, DailyReflectionService>();
+                    
+                    // Add platform-specific services (Uno implementations)
+                    services.AddSingleton<ISettingsService, PlatformServices.SettingsService>();
+                    services.AddSingleton<IShareService, PlatformServices.ShareService>();
+                    services.AddTransient<INotificationService, PlatformServices.NotificationService>();
+                    
+                    // Add ViewModels from shared Presentation project
+                    services.AddSingleton<DailyReflectionViewModel>();
+                    services.AddSingleton<SettingsViewModel>();
+                    services.AddSingleton<SobrietyTimeViewModel>();
+                })
+                .UseNavigation(RegisterRoutes)
+            );
 
-        MainWindow = new Window();
+        // Get the MainWindow from the builder before building
+        MainWindow = builder.Window;
+
+        // Build the host - returns IHost
+        Host = builder.Build();
+        ServiceProvider = Host.Services;
+
 #if DEBUG
         MainWindow.UseStudio();
 #endif
-
-        // Navigate to the MainPage which hosts the TabBar navigation
-        if (MainWindow.Content is not Frame rootFrame)
-        {
-            rootFrame = new Frame();
-            MainWindow.Content = rootFrame;
-            rootFrame.NavigationFailed += OnNavigationFailed;
-        }
-
-        if (rootFrame.Content == null)
-        {
-            rootFrame.Navigate(typeof(MainPage), args.Arguments);
-        }
 
         MainWindow.SetWindowIcon();
         MainWindow.Activate();
     }
 
-    void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
+    /// <summary>
+    /// Register navigation routes and view mappings for Region-based navigation.
+    /// Based on Uno Platform Docs: DefineRoutes.md, RegisterRoutes.md
+    /// </summary>
+    private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
     {
-        throw new InvalidOperationException($"Failed to load {e.SourcePageType.FullName}: {e.Exception}");
+        views.Register(
+            // MainPage hosts the TabBar navigation shell
+            new ViewMap<MainPage>(),
+            // Tab pages for Region-based navigation
+            new ViewMap<DailyReflectionPage, DailyReflectionViewModel>(),
+            new ViewMap<SobrietyTimePage, SobrietyTimeViewModel>(),
+            new ViewMap<SettingsPage, SettingsViewModel>()
+        );
+
+        routes.Register(
+            new RouteMap("", View: views.FindByView<MainPage>(),
+                Nested:
+                [
+                    // Tab routes - names match uen:Region.Name in MainPage.xaml
+                    new RouteMap("Reflection", View: views.FindByView<DailyReflectionPage>(), IsDefault: true),
+                    new RouteMap("SoberTime", View: views.FindByView<SobrietyTimePage>()),
+                    new RouteMap("Settings", View: views.FindByView<SettingsPage>())
+                ]
+            )
+        );
     }
 
     public static void InitializeLogging()
