@@ -43,10 +43,10 @@
 
   <ItemGroup>
     <!-- Reference shared projects -->
-    <ProjectReference Include="..\..\DailyReflection.Core\DailyReflection.Core.csproj" />
-    <ProjectReference Include="..\..\DailyReflection.Data\DailyReflection.Data.csproj" />
-    <ProjectReference Include="..\..\DailyReflection.Services\DailyReflection.Services.csproj" />
-    <ProjectReference Include="..\..\DailyReflection.Presentation\DailyReflection.Presentation.csproj" />
+    <ProjectReference Include="..\..\..\DailyReflection.Core\DailyReflection.Core.csproj" />
+    <ProjectReference Include="..\..\..\DailyReflection.Data\DailyReflection.Data.csproj" />
+    <ProjectReference Include="..\..\..\DailyReflection.Services\DailyReflection.Services.csproj" />
+    <ProjectReference Include="..\..\..\DailyReflection.Presentation\DailyReflection.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

@@ -38,6 +38,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\DailyReflection.Presentation\DailyReflection.Presentation.csproj" />
+    <ProjectReference Include="..\..\..\DailyReflection.Presentation\DailyReflection.Presentation.csproj" />
   </ItemGroup>
 </Project>

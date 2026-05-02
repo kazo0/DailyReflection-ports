@@ -19,7 +19,7 @@ dotnet build DailyReflection-maui.slnf
 dotnet build DailyReflection-uno.slnf
 
 # Build only Avalonia desktop
-dotnet build DailyReflection.Avalonia/DailyReflection.Avalonia.Desktop/DailyReflection.Avalonia.Desktop.csproj
+dotnet build heads/DailyReflection.Avalonia/DailyReflection.Avalonia.Desktop/DailyReflection.Avalonia.Desktop.csproj
 
 # Run tests (NUnit)
 dotnet test DailyReflection.Presentation.Tests
@@ -46,9 +46,12 @@ DailyReflection.Presentation  → ViewModels (MVVM via CommunityToolkit.Mvvm), M
 
 ### Platform Heads
 
-- **DailyReflection/** — MAUI (net10.0-android/ios/maccatalyst). Shell-based tab navigation. Entry: `MauiProgram.CreateMauiApp()`.
-- **DailyReflection.Uno/** — Uno Platform (net10.0-android/ios/desktop). Frame-based navigation with TabBar. Entry: `App.OnLaunched()`.
-- **DailyReflection.Avalonia/** — Avalonia (Desktop/Android/iOS/Browser). ViewLocator pattern. Entry: `App.OnFrameworkInitializationCompleted()`.
+All three platform heads live under `heads/`:
+
+- **heads/DailyReflection.Maui/** — MAUI (net10.0-android/ios/maccatalyst). Shell-based tab navigation. Entry: `MauiProgram.CreateMauiApp()`.
+- **heads/DailyReflection.Uno/** — Uno Platform (net10.0-android/ios/desktop). Frame-based navigation with TabBar. Entry: `App.OnLaunched()`.
+- **heads/DailyReflection.Avalonia/** — Avalonia (Desktop/Android/iOS/Browser). ViewLocator pattern. Entry: `App.OnFrameworkInitializationCompleted()`.
+- **heads/DailyReflection.Xamarin/** — Git submodule pinned to upstream [kazo0/DailyReflection](https://github.com/kazo0/DailyReflection) (the original Xamarin.Forms app this repo was ported from). Read-only reference; not part of any solution or build. Run `git submodule update --init` after cloning to populate.
 
 Each platform head provides its own implementations of `ISettingsService`, `IShareService`, and `INotificationService` in a `PlatformServices/` folder.
 
