@@ -9,9 +9,9 @@
     <Nullable>enable</Nullable>
 
     <!-- Display name -->
-    <ApplicationTitle>DailyReflection</ApplicationTitle>
+    <ApplicationTitle>Daily Reflection</ApplicationTitle>
     <!-- App Identifier -->
-    <ApplicationId>com.kazo0.dailyreflection-uno</ApplicationId>
+    <ApplicationId>com.kazo0.dailyreflectionuno</ApplicationId>
     <!-- Versions -->
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
@@ -29,6 +29,7 @@
       Hosting;
       Toolkit;
       Configuration;
+      Navigation;
     </UnoFeatures>
   </PropertyGroup>
 

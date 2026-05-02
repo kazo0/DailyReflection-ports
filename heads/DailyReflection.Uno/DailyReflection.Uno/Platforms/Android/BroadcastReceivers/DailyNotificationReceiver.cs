@@ -55,7 +55,7 @@ public class DailyNotificationReceiver : BroadcastReceiver
             .SetContentIntent(pendingIntent)
             .SetContentTitle("Daily Reflection")
             .SetContentText("Time for the daily reflection!")
-            .SetSmallIcon(Android.Resource.Drawable.IcDialogInfo) // Use system icon as fallback
+            .SetSmallIcon(Resource.Drawable.notif_icon)
             .SetSound(RingtoneManager.GetDefaultUri(RingtoneType.Notification))
             .SetAutoCancel(true)
             .SetPriority(NotificationCompat.PriorityDefault);

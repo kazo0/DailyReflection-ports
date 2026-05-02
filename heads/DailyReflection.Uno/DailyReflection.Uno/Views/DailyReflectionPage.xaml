@@ -32,9 +32,15 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  Top CommandBar replacing MAUI ToolbarItems  -->
+        <!--  Top CommandBar replacing MAUI ToolbarItems. Content slot acts as the page title (matching Shell.Title binding to MMMM d). -->
         <CommandBar Grid.Row="0"
                     DefaultLabelPosition="Right">
+            <CommandBar.Content>
+                <TextBlock Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Style="{StaticResource SubtitleTextStyle}"
+                           Text="{x:Bind FormatPageDate(ViewModel.Date), Mode=OneWay}" />
+            </CommandBar.Content>
             <AppBarButton x:Name="CalendarButton"
                           Label="Select Date">
                 <AppBarButton.Icon>
@@ -66,14 +72,14 @@
                     <!--  Title  -->
                     <TextBlock Style="{StaticResource TitleTextStyle}"
                                TextAlignment="Center"
-                               Text="{x:Bind ViewModel.DailyReflection.Title, Mode=OneWay}" />
+                               Text="{x:Bind ViewModel.DailyReflection.Title, Mode=OneWay, Converter={StaticResource HtmlToTextConverter}}" />
 
-                    <!--  Reading/Quote (HTML text not supported, showing plain)  -->
+                    <!--  Reading/Quote (DB stores HTML; HtmlToTextConverter strips tags, FontStyle preserves italic emphasis)  -->
                     <TextBlock Margin="0,20,0,0"
                                FontStyle="Italic"
                                Style="{StaticResource BodyTextStyle}"
                                TextAlignment="Center"
-                               Text="{x:Bind ViewModel.DailyReflection.Reading, Mode=OneWay}"
+                               Text="{x:Bind ViewModel.DailyReflection.Reading, Mode=OneWay, Converter={StaticResource HtmlToTextConverter}}"
                                TextWrapping="Wrap" />
 
                     <!--  Source  -->
@@ -85,7 +91,7 @@
                     <!--  Thought  -->
                     <TextBlock Margin="0,20,0,0"
                                Style="{StaticResource BodyTextStyle}"
-                               Text="{x:Bind ViewModel.DailyReflection.Thought, Mode=OneWay}"
+                               Text="{x:Bind ViewModel.DailyReflection.Thought, Mode=OneWay, Converter={StaticResource HtmlToTextConverter}}"
                                TextWrapping="Wrap" />
 
                     <!--  Copyright  -->

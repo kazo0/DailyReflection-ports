@@ -41,6 +41,8 @@ public sealed partial class DailyReflectionPage : Page
         return (!hasError && !isLoading) ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    public string FormatPageDate(DateTime date) => date.ToString("MMMM d");
+
     private async void DatePickerFlyout_DatePicked(DatePickerFlyout sender, DatePickedEventArgs args)
     {
         ViewModel.Date = args.NewDate.DateTime;

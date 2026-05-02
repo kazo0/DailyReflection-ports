@@ -1,4 +1,6 @@
+using CommunityToolkit.Mvvm.Messaging;
 using DailyReflection.Core.Constants;
+using DailyReflection.Presentation.Messages;
 using DailyReflection.Presentation.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -25,6 +27,25 @@ public sealed partial class SettingsPage : Page
         this.InitializeComponent();
         ViewModel.IsActive = true;
         this.DataContext = ViewModel;
+
+        WeakReferenceMessenger.Default.Register<SettingsPage, NotificationPermissionRequestMessage>(
+            this,
+            (r, m) => m.Reply(r.ShowPermissionDialogAsync()));
+    }
+
+    private async Task<bool> ShowPermissionDialogAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Permission Required",
+            Content = "In order for notifications to work, permission must be granted in the System Settings. Press OK to be brought to your system's Notification Settings page.",
+            PrimaryButtonText = "OK",
+            CloseButtonText = "Cancel",
+            XamlRoot = this.XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary;
     }
 
     /// <summary>

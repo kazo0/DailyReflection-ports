@@ -36,7 +36,19 @@
 													   DisplayPreferenceString="DaysOnly" />
 	</Page.Resources>
 
-	<ScrollViewer>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+
+		<!-- Page title (replaces Xamarin Shell.Title) -->
+		<TextBlock Grid.Row="0"
+				   Margin="16,12"
+				   Style="{StaticResource TitleTextStyle}"
+				   Text="Sober Time" />
+
+		<ScrollViewer Grid.Row="1">
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="20" />
@@ -149,5 +161,6 @@
 					   HorizontalAlignment="Center"
 					   Text="One day at a time" />
 		</Grid>
-	</ScrollViewer>
+		</ScrollViewer>
+	</Grid>
 </Page>

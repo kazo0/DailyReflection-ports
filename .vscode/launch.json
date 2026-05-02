@@ -20,13 +20,13 @@
       "request": "launch",
       "preLaunchTask": "build-desktop",
       // If you have changed target frameworks, make sure to update the program path.
-      "program": "${workspaceFolder}/DailyReflection.Uno/bin/Debug/net10.0-desktop/DailyReflection.Uno.dll",
+      "program": "${workspaceFolder}/heads/DailyReflection.Uno/DailyReflection.Uno/bin/Debug/net10.0-desktop/DailyReflection.Uno.dll",
       "args": [],
       "launchSettingsProfile": "DailyReflection.Uno (Desktop)",
       "env": {
         "DOTNET_MODIFIABLE_ASSEMBLIES": "debug"
       },
-      "cwd": "${workspaceFolder}/DailyReflection.Uno",
+      "cwd": "${workspaceFolder}/heads/DailyReflection.Uno/DailyReflection.Uno",
       // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
       "console": "internalConsole",
       "stopAtEntry": false

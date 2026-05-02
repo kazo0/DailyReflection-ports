@@ -9,7 +9,7 @@ namespace DailyReflection.PlatformServices;
 /// Based on Uno Platform Docs: features/settings.md
 /// Maps from MAUI Preferences to WinUI/Uno ApplicationData.LocalSettings
 /// </summary>
-public class SettingsService : ISettingsService
+public partial class SettingsService : ISettingsService
 {
     private readonly ApplicationDataContainer _localSettings;
 
@@ -26,7 +26,7 @@ public class SettingsService : ISettingsService
             {
                 return typedValue;
             }
-            
+
             // Handle DateTime stored as string (binary)
             if (typeof(T) == typeof(DateTime) && value is long longValue)
             {
@@ -66,6 +66,8 @@ public class SettingsService : ISettingsService
         {
             _localSettings.Values[key] = value;
         }
+
+        MirrorSet(key, value);
     }
 
     public void MigrateOldPreferences()
@@ -79,4 +81,6 @@ public class SettingsService : ISettingsService
         Set(PreferenceConstants.NotificationsEnabled, notifsEnabled);
         Set(PreferenceConstants.NotificationTime, notifTime);
     }
+
+    partial void MirrorSet<T>(string key, T value);
 }

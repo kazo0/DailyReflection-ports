@@ -16,6 +16,11 @@
 				<ResourceDictionary Source="ms-appx:///Styles/Styles.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 
+			<!-- FontAwesome font families -->
+			<FontFamily x:Key="FontAwesomeSolid">ms-appx:///Assets/Fonts/FontAwesomeSolid.otf#Font Awesome 5 Free Solid</FontFamily>
+			<FontFamily x:Key="FontAwesomeRegular">ms-appx:///Assets/Fonts/FontAwesomeRegular.otf#Font Awesome 5 Free Regular</FontFamily>
+			<FontFamily x:Key="FontAwesomeBrands">ms-appx:///Assets/Fonts/FontAwesomeBrands.otf#Font Awesome 5 Brands Regular</FontFamily>
+
 			<!-- Font Icon Glyphs (from FontAwesome) -->
 			<x:String x:Key="Calendar">&#xf073;</x:String>
 			<x:String x:Key="Book">&#xf02d;</x:String>
@@ -34,6 +39,7 @@
 			<converters:AllFalseBoolToVisibilityConverter x:Key="AllFalseBoolToVisibilityConverter" />
 			<converters:SoberTimeDisplayEnumConverter x:Key="SoberTimeDisplayEnumConverter" />
 			<converters:DateTimeToTimeSpanConverter x:Key="DateTimeToTimeSpanConverter" />
+			<converters:HtmlToTextConverter x:Key="HtmlToTextConverter" />
 
 		</ResourceDictionary>
 	</Application.Resources>

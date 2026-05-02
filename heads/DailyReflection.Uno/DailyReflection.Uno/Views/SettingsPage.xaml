@@ -24,7 +24,19 @@
 		<converters:SoberTimeDisplayEnumConverter x:Key="SoberTimeDisplayEnumConverter" />
 	</Page.Resources>
 
-	<ScrollViewer>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+
+		<!-- Page title (replaces Xamarin Shell.Title) -->
+		<TextBlock Grid.Row="0"
+				   Margin="16,12"
+				   Style="{StaticResource TitleTextStyle}"
+				   Text="Settings" />
+
+		<ScrollViewer Grid.Row="1">
 		<StackPanel Margin="16"
 					Spacing="8">
 
@@ -169,5 +181,6 @@
 				</StackPanel>
 			</Grid>
 		</StackPanel>
-	</ScrollViewer>
+		</ScrollViewer>
+	</Grid>
 </Page>

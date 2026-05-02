@@ -1,50 +1,38 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using DailyReflection.Data.Databases;
-using DailyReflection.Services.DailyReflection;
-using DailyReflection.Services.Notification;
-using DailyReflection.Services.Settings;
-using DailyReflection.Services.Share;
+using DailyReflection.DependencyInjection;
+using DailyReflection.Presentation.DependencyInjection;
 using DailyReflection.Presentation.ViewModels;
 using DailyReflection.Views;
-using System.Reflection;
+using Uno.Extensions;
+using Uno.Extensions.Configuration;
+using Uno.Extensions.Hosting;
+using Uno.Extensions.Navigation;
 using Uno.Resizetizer;
 
 namespace DailyReflection;
 
 /// <summary>
 /// Daily Reflection app for Uno Platform.
-/// Migrated from .NET MAUI with the following key changes:
-/// - Shell navigation replaced with TabBar from Uno.Toolkit
-/// - Preferences replaced with ApplicationData.LocalSettings (Uno Docs: features/settings.md)
-/// - Share replaced with DataTransferManager (Uno Docs: features/windows-applicationmodel-datatransfer.md)
-/// - DI configured via Uno.Extensions.Hosting (Uno Docs: HostingSetup.howto.md)
+/// Wires up the canonical Uno.Extensions stack:
+///   - UseConfiguration with EmbeddedSource&lt;App&gt;() loads appsettings.json
+///   - UseToolkitNavigation + UseNavigation drive region-based TabBar routing
+///   - ConfigureServices delegates to the shared AddPresentationDependencies chain
 /// </summary>
 public partial class App : Application
 {
-    public static IServiceProvider? ServiceProvider { get; private set; }
     public IHost? Host { get; private set; }
 
     /// <summary>
-    /// Gets a service from the DI container.
-    /// Helper method to simplify service resolution from pages.
+    /// Resolve a service from the host's DI container.
     /// </summary>
     public static T GetService<T>() where T : class
     {
-        if (ServiceProvider == null)
-        {
-            throw new InvalidOperationException("ServiceProvider is not initialized.");
-        }
-        
-        return ServiceProvider.GetService<T>() 
+        var host = ((App)Current).Host
+            ?? throw new InvalidOperationException("Host is not initialized.");
+
+        return host.Services.GetService<T>()
             ?? throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered.");
     }
 
-    /// <summary>
-    /// Initializes the singleton application object.
-    /// </summary>
     public App()
     {
         this.InitializeComponent();
@@ -54,75 +42,48 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        // Build configuration from embedded appsettings.json
-        var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream("DailyReflection.appsettings.json");
-        
-        IConfiguration config;
-        if (stream != null)
-        {
-            config = new ConfigurationBuilder()
-                .AddJsonStream(stream)
-                .Build();
-        }
-        else
-        {
-            config = new ConfigurationBuilder().Build();
-        }
+        var builder = this.CreateBuilder(args)
+            .UseToolkitNavigation()
+            .Configure(host => host
+                .UseConfiguration(configure: configBuilder =>
+                    configBuilder.EmbeddedSource<App>())
+                .ConfigureServices((context, services) =>
+                {
+                    services.AddPlatformServices();
+                    services.AddPresentationDependencies();
 
-        // Build DI container
-        var services = new ServiceCollection();
-        
-        // Add configuration
-        services.AddSingleton<IConfiguration>(config);
-        
-        // Add services from shared projects
-        services.AddSingleton<IDailyReflectionDatabase, DailyReflection.Data.Databases.DailyReflectionDatabase>();
-        services.AddTransient<IDailyReflectionService, DailyReflectionService>();
-        
-        // Add platform-specific services (Uno implementations)
-        services.AddSingleton<ISettingsService, PlatformServices.SettingsService>();
-        services.AddSingleton<IShareService, PlatformServices.ShareService>();
-        services.AddTransient<INotificationService, PlatformServices.NotificationService>();
-        
-        // Add ViewModels from shared Presentation project
-        services.AddSingleton<DailyReflectionViewModel>();
-        services.AddSingleton<SettingsViewModel>();
-        services.AddSingleton<SobrietyTimeViewModel>();
-        
-        // Add Pages/Views
-        services.AddTransient<MainPage>();
-        services.AddTransient<DailyReflectionPage>();
-        services.AddTransient<SettingsPage>();
-        services.AddTransient<SobrietyTimePage>();
-        
-        ServiceProvider = services.BuildServiceProvider();
+                    services.AddTransient<MainPage>();
+                    services.AddTransient<DailyReflectionPage>();
+                    services.AddTransient<SettingsPage>();
+                    services.AddTransient<SobrietyTimePage>();
+                })
+                .UseNavigation(RegisterRoutes));
 
-        MainWindow = new Window();
+        MainWindow = builder.Window;
 #if DEBUG
         MainWindow.UseStudio();
 #endif
-
-        // Navigate to the MainPage which hosts the TabBar navigation
-        if (MainWindow.Content is not Frame rootFrame)
-        {
-            rootFrame = new Frame();
-            MainWindow.Content = rootFrame;
-            rootFrame.NavigationFailed += OnNavigationFailed;
-        }
-
-        if (rootFrame.Content == null)
-        {
-            rootFrame.Navigate(typeof(MainPage), args.Arguments);
-        }
-
         MainWindow.SetWindowIcon();
-        MainWindow.Activate();
+
+        Host = builder.Build();
     }
 
-    void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
+    private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
     {
-        throw new InvalidOperationException($"Failed to load {e.SourcePageType.FullName}: {e.Exception}");
+        views.Register(
+            new ViewMap<MainPage>(),
+            new ViewMap<DailyReflectionPage, DailyReflectionViewModel>(),
+            new ViewMap<SobrietyTimePage, SobrietyTimeViewModel>(),
+            new ViewMap<SettingsPage, SettingsViewModel>());
+
+        routes.Register(
+            new RouteMap("", View: views.FindByView<MainPage>(),
+                Nested:
+                [
+                    new RouteMap("Reflection", View: views.FindByViewModel<DailyReflectionViewModel>(), IsDefault: true),
+                    new RouteMap("SoberTime", View: views.FindByViewModel<SobrietyTimeViewModel>()),
+                    new RouteMap("Settings", View: views.FindByViewModel<SettingsViewModel>()),
+                ]));
     }
 
     public static void InitializeLogging()

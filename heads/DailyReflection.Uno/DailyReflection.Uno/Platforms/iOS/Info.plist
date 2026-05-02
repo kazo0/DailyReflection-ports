@@ -33,6 +33,12 @@
 		<string>Assets.xcassets/icon.appiconset</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<key>UIAppFonts</key>
+		<array>
+			<string>FontAwesomeSolid.otf</string>
+			<string>FontAwesomeRegular.otf</string>
+			<string>FontAwesomeBrands.otf</string>
+		</array>
 
 		<!--
 		Adjust this to your application's encryption usage.
