@@ -1,0 +1,3 @@
+[submodule "heads/DailyReflection.Xamarin"]
+	path = heads/DailyReflection.Xamarin
+	url = https://github.com/kazo0/DailyReflection
