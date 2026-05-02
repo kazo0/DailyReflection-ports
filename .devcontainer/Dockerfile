@@ -34,12 +34,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libvlc-dev \
   libgtk-3-dev \
   libwebkit2gtk-4.1-dev \
+  # File picker dialog support (xdg-desktop-portal chain + zenity fallback)
+  xdg-desktop-portal \
+  xdg-desktop-portal-gtk \
+  zenity \
+  dbus \
+  dbus-user-session \
   # SSH client (WSL host terminal)
   openssh-client \
+  # Mono profiler (mprof-report CLI + profiler .so libraries)
+  mono-utils \
+  libmono-profiler \
   # Misc
   curl \
   wget \
   ca-certificates \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# Azure CLI + DevOps extension (az devops)
+# ---------------------------------------------------------------------------
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
+  && az extension add --name azure-devops --system \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
@@ -54,11 +70,16 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# Node.js 20 (required for npm tooling)
+# Node.js 20 (required for Playwright install-deps, Claude Code npm install, and npm tooling)
 # ---------------------------------------------------------------------------
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+# Playwright system dependencies (Chromium needs libnss3, libnspr4, etc.)
+# ---------------------------------------------------------------------------
+RUN npx playwright install-deps chromium
 
 # ---------------------------------------------------------------------------
 # git-delta (better diffs)
@@ -96,7 +117,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 # Ensure non-root user owns /usr/local/share for npm global installs
 RUN mkdir -p /usr/local/share/npm-global && \
-  chown -R ${USERNAME}:${USERNAME} /usr/local/share
+  chown -R ${USERNAME}:${USERNAME} /usr/local/share/npm-global
 
 # Create workspace and config directories
 RUN mkdir -p /daily-reflection /home/${USERNAME}/.claude /home/${USERNAME}/.copilot /home/${USERNAME}/.nuget && \
@@ -121,14 +142,15 @@ ENV SHELL=/bin/zsh
 ENV EDITOR=nano
 ENV VISUAL=nano
 
-# npm global prefix — writable by non-root user (matches Anthropic reference)
+# npm global prefix — writable by non-root user
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
 # ---------------------------------------------------------------------------
-# Claude Code CLI
+# Claude Code CLI (native installer — installs to ~/.local/bin/claude)
 # ---------------------------------------------------------------------------
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_CODE_VERSION}
+ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 
 # ---------------------------------------------------------------------------
 # GitHub Copilot CLI (installs to ~/.local/bin/copilot)
@@ -136,14 +158,47 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 RUN curl -fsSL https://gh.io/copilot-install | bash -s -- ${COPILOT_CLI_VERSION}
 
 # ---------------------------------------------------------------------------
-# .NET workloads (pre-install so builds work immediately)
+# Microsoft Build of OpenJDK 21 — required by the Android SDK tooling chain
+# (sdkmanager, aapt2, d8). Installed manually because uno-check does not
+# provision a JDK on Linux. Follows the install flow from
+# https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu
+# (the MS package repo serves both Ubuntu and Debian via the same layout).
 # ---------------------------------------------------------------------------
 USER root
-RUN dotnet workload install wasm-tools
+RUN . /etc/os-release && \
+  if [ "$ID" = "ubuntu" ]; then \
+    MS_REPO_PATH="ubuntu/${VERSION_ID}"; \
+  else \
+    MS_REPO_PATH="debian/${VERSION_ID%%.*}"; \
+  fi && \
+  wget -qO /tmp/packages-microsoft-prod.deb \
+    "https://packages.microsoft.com/config/${MS_REPO_PATH}/packages-microsoft-prod.deb" && \
+  dpkg -i /tmp/packages-microsoft-prod.deb && \
+  rm /tmp/packages-microsoft-prod.deb && \
+  apt-get update && apt-get install -y --no-install-recommends msopenjdk-21 && \
+  apt-get clean && rm -rf /var/lib/apt/lists/* && \
+  # The msopenjdk-21 package installs at `/usr/lib/jvm/msopenjdk-21-<arch>`,
+  # where <arch> is amd64 / arm64 / etc. Resolve the actual install dir by
+  # walking from `javac` and pin a stable symlink so JAVA_HOME below is
+  # arch-agnostic — required because mcr.microsoft.com/dotnet/sdk:10.0 is
+  # multi-arch and devcontainers may be built on Apple Silicon hosts.
+  ln -sfn "$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")" \
+    /usr/lib/jvm/msopenjdk-21-current
+
+ENV JAVA_HOME=/usr/lib/jvm/msopenjdk-21-current
+ENV PATH=${JAVA_HOME}/bin:${PATH}
 
 # ---------------------------------------------------------------------------
-# uno-check (validate environment)
-# Installed as developer so the tool is usable interactively.
+# .NET workloads (pre-install so builds work immediately)
+# ---------------------------------------------------------------------------
+RUN dotnet workload install wasm-tools android
+
+# ---------------------------------------------------------------------------
+# uno-check (validate environment, from build/ci/scripts/run-uno-check.sh)
+# Installed as developer so the tool is usable interactively. Android SDK +
+# platform-tools + build-tools are provisioned by uno-check (we only pre-install
+# the JDK above because uno-check does not handle it on Linux).
+# --skip androidemulator stays: agents + CI build APKs, they do not run them.
 # ---------------------------------------------------------------------------
 USER ${USERNAME}
 ENV PATH="${PATH}:/home/${USERNAME}/.dotnet/tools"
@@ -151,8 +206,8 @@ RUN dotnet tool install --global uno.check
 USER root
 RUN uno-check -v --ci --non-interactive --fix \
   --skip xcode --skip gtk3 --skip vswin --skip vswinworkloads --skip unosdk \
-  --skip dotnetnewunotemplates --skip vsmac --skip androidsdk --skip openjdk --skip androidemulator \
-  --tfm net10.0-desktop --tfm net10.0-browserwasm \
+  --skip dotnetnewunotemplates --skip vsmac --skip openjdk --skip androidemulator \
+  --tfm net10.0-desktop --tfm net10.0-browserwasm --tfm net10.0-android \
   || true
 
 # ---------------------------------------------------------------------------

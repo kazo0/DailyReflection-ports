@@ -23,7 +23,7 @@ DNSMASQ_LISTEN="127.0.0.53"
 if [ -z "${UPSTREAM_DNS:-}" ]; then
   UPSTREAM_DNS=$(grep -m1 '^nameserver' /etc/resolv.conf | awk '{print $2}' || true)
   # Skip loopback (would point back at ourselves after resolv.conf rewrite)
-  if [ -z "$UPSTREAM_DNS" ] || echo "$UPSTREAM_DNS" | grep -qE '^127\.'; then
+  if [ -z "$UPSTREAM_DNS" ] || echo "$UPSTREAM_DNS" | grep -qE '^127\.' || [ "$UPSTREAM_DNS" = "::1" ]; then
     UPSTREAM_DNS="8.8.8.8"
   fi
 fi
@@ -113,12 +113,26 @@ server=/dotnet.microsoft.com/${UPSTREAM_DNS}
 # Microsoft Learn (MCP documentation server)
 server=/learn.microsoft.com/${UPSTREAM_DNS}
 
+# Microsoft package feed (OpenJDK, .NET repos — used by apt + uno-check)
+server=/packages.microsoft.com/${UPSTREAM_DNS}
+server=/aka.ms/${UPSTREAM_DNS}
+
+# Android SDK tooling (sdkmanager downloads platform-tools + build-tools from
+# dl.google.com; developer.android.com hosts the cmdline-tools redirects).
+server=/dl.google.com/${UPSTREAM_DNS}
+server=/developer.android.com/${UPSTREAM_DNS}
+server=/maven.google.com/${UPSTREAM_DNS}
+
 # Uno domains
 server=/platform.uno/${UPSTREAM_DNS}
 server=/unoplatform.net/${UPSTREAM_DNS}
 
 # Figma MCP
 server=/figma.com/${UPSTREAM_DNS}
+
+# Playwright
+server=/cdn.playwright.dev/${UPSTREAM_DNS}
+server=/storage.googleapis.com/${UPSTREAM_DNS}
 EOF
 
 # --------------------------------------------------------------------------
