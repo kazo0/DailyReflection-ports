@@ -33,6 +33,22 @@
     </UnoFeatures>
   </PropertyGroup>
 
+  <!-- Spec 010 §B — pin iOS minimum to 15.0 to match Info.plist. -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!--
+    Spec 009 — Android min SDK pinned to match the Xamarin original (21).
+    Runtime targetSdkVersion is fixed at 33 in AndroidManifest.xml; we
+    intentionally do *not* pin TargetPlatformVersion here because Uno's
+    AndroidX package set requires the newer compile target. Compile target
+    is independent from the manifest's android:targetSdkVersion at runtime.
+  -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
+    <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="NodaTime" />

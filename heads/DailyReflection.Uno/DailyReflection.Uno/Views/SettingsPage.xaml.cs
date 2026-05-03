@@ -1,33 +1,43 @@
 using CommunityToolkit.Mvvm.Messaging;
-using DailyReflection.Core.Constants;
 using DailyReflection.Presentation.Messages;
 using DailyReflection.Presentation.ViewModels;
+using DailyReflection.Services.VersionTracking;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using System;
+using System.Threading.Tasks;
 
 namespace DailyReflection.Views;
 
 /// <summary>
-/// Page for managing app settings.
-/// Migrated from MAUI SettingsView.
+/// Page for managing app settings. Lifecycle, messenger registration, and
+/// VM activation are inherited from <see cref="PageBase{TViewModel}"/>.
 /// </summary>
-public sealed partial class SettingsPage : Page
+public sealed partial class SettingsPage : PageBase
 {
     public SettingsViewModel ViewModel { get; }
-    
+    protected override ViewModelBase ActiveViewModel => ViewModel;
+
     /// <summary>
-    /// App version for display.
+    /// Runtime app version sourced from <see cref="IVersionTrackingService"/>
+    /// (spec 001 — replaces the hard-coded VersionConstants.VersionNumber).
     /// </summary>
-    public string AppVersion => VersionConstants.VersionNumber;
+    public string AppVersion { get; }
 
     public SettingsPage()
     {
         ViewModel = App.GetService<SettingsViewModel>();
-        this.InitializeComponent();
-        ViewModel.IsActive = true;
-        this.DataContext = ViewModel;
+        DataContext = ViewModel;
 
+        var version = App.GetService<IVersionTrackingService>();
+        AppVersion = $"{version.CurrentVersion} ({version.CurrentBuild})";
+
+        this.InitializeComponent();
+    }
+
+    protected override void RegisterMessages()
+    {
         WeakReferenceMessenger.Default.Register<SettingsPage, NotificationPermissionRequestMessage>(
             this,
             (r, m) => m.Reply(r.ShowPermissionDialogAsync()));
@@ -48,56 +58,38 @@ public sealed partial class SettingsPage : Page
         return result == ContentDialogResult.Primary;
     }
 
-    /// <summary>
-    /// Format notification time for display.
-    /// Replaces MAUI StringFormat binding.
-    /// </summary>
-    public string FormatNotificationTime(DateTime time)
-    {
-        return time.ToString("h:mm tt");
-    }
+    public string FormatNotificationTime(DateTime time) => time.ToString("h:mm tt");
+    public string FormatSoberDate(DateTime date) => date.ToString("MMM d, yyyy");
 
-    /// <summary>
-    /// Format sober date for display.
-    /// Replaces MAUI StringFormat binding.
-    /// </summary>
-    public string FormatSoberDate(DateTime date)
-    {
-        return date.ToString("MMM d, yyyy");
-    }
-
-    /// <summary>
-    /// Handle tap on notification time cell - shows time picker.
-    /// </summary>
     private void NotificationTime_Tapped(object sender, TappedRoutedEventArgs e)
     {
-        if (!ViewModel.NotificationsEnabled) return;
-        
+        // Match the Xamarin TimePickerLabelEnabledConverter rule — Android always
+        // taps through; iOS / desktop only when notifications are enabled.
+        if (!OperatingSystem.IsAndroid() && !ViewModel.NotificationsEnabled)
+        {
+            return;
+        }
+
         NotificationTimePicker.Visibility = Visibility.Visible;
     }
 
-    /// <summary>
-    /// Handle time picker value changed.
-    /// </summary>
     private void NotificationTimePicker_TimeChanged(object sender, TimePickerValueChangedEventArgs e)
     {
-        // Update the DateTime by combining date with new time
-        ViewModel.NotificationTime = DateTime.Today.Add(e.NewTime);
+        // Spec 006 §B — preserve the date component on the persisted DateTime
+        // instead of rebasing to today on every time change.
+        var current = ViewModel.NotificationTime;
+        ViewModel.NotificationTime = new DateTime(
+            current.Year, current.Month, current.Day,
+            e.NewTime.Hours, e.NewTime.Minutes, 0, current.Kind);
         NotificationTimePicker.Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// Handle tap on sober date cell - shows calendar date picker.
-    /// </summary>
     private void SoberDate_Tapped(object sender, TappedRoutedEventArgs e)
     {
         SoberDatePicker.Visibility = Visibility.Visible;
         SoberDatePicker.IsCalendarOpen = true;
     }
 
-    /// <summary>
-    /// Handle calendar date picker value changed.
-    /// </summary>
     private void SoberDatePicker_DateChanged(CalendarDatePicker sender, CalendarDatePickerDateChangedEventArgs args)
     {
         if (args.NewDate.HasValue)
@@ -107,18 +99,12 @@ public sealed partial class SettingsPage : Page
         SoberDatePicker.Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// Handle tap on sober time display preference cell - shows combo box.
-    /// </summary>
     private void SoberTimeDisplay_Tapped(object sender, TappedRoutedEventArgs e)
     {
         SoberTimeDisplayComboBox.Visibility = Visibility.Visible;
         SoberTimeDisplayComboBox.IsDropDownOpen = true;
     }
 
-    /// <summary>
-    /// Handle combo box selection changed.
-    /// </summary>
     private void SoberTimeDisplayComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         SoberTimeDisplayComboBox.Visibility = Visibility.Collapsed;

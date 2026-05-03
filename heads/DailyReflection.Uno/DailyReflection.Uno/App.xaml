@@ -28,18 +28,14 @@
 			<x:String x:Key="Clock">&#xf017;</x:String>
 			<x:String x:Key="Share">&#xf14d;</x:String>
 
-			<!-- Converters -->
-			<converters:InverseBoolConverter x:Key="InverseBoolConverter" />
-			<converters:HasValueConverter x:Key="HasValueConverter" />
+			<!-- Converters (only those referenced via {StaticResource ...} in views). -->
 			<converters:IntToBoolConverter x:Key="IntToBoolConverter" />
 			<converters:NullToBoolConverter x:Key="NullToBoolConverter" />
 			<converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
 			<converters:BoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"
 												  Invert="True" />
-			<converters:AllFalseBoolToVisibilityConverter x:Key="AllFalseBoolToVisibilityConverter" />
 			<converters:SoberTimeDisplayEnumConverter x:Key="SoberTimeDisplayEnumConverter" />
-			<converters:DateTimeToTimeSpanConverter x:Key="DateTimeToTimeSpanConverter" />
-			<converters:HtmlToTextConverter x:Key="HtmlToTextConverter" />
+			<converters:TimePickerLabelEnabledConverter x:Key="TimePickerLabelEnabledConverter" />
 
 		</ResourceDictionary>
 	</Application.Resources>

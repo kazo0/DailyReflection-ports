@@ -397,4 +397,212 @@ The items below are not asks of this report; they are the concrete deltas that w
 
 ---
 
+## 10. Deep gap analysis — Uno port vs. original Xamarin.Forms app
+
+This section is a focused, file‑level diff between the **original Xamarin.Forms app** (`heads/DailyReflection.Xamarin/…`) and the **Uno port** (`heads/DailyReflection.Uno/…`). It supersedes the higher‑level §5/§8 by going through every page, service, manifest, and lifecycle hook concretely. Items are grouped by severity:
+
+* 🔴 **Functional gap** — a feature, behaviour or guarantee from the Xamarin app is missing or broken on the Uno port.
+* 🟠 **Behavioural drift** — the feature still works but behaves differently (different data, identifiers, wording, persistence, etc.).
+* 🟡 **Quality / parity issue** — code‑style, testability, or porting cleanliness gaps that don't break the user experience but should be closed.
+
+### 10.1 Daily Reflection page
+
+Reference files:
+* Xamarin: `Views/DailyReflectionView.xaml(.cs)`
+* Uno: `Views/DailyReflectionPage.xaml(.cs)`
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.1.1 | 🔴 | **HTML inline emphasis is lost.** | The DB stores the *Reading* with `<i>…</i>` tags and the copyright string as `From the book <i>Daily Reflections</i><br>…`. Xamarin renders these via `Label TextType="Html"`. The Uno port pipes everything through `HtmlToTextConverter` (`StringExtensions.StripHtml`) and applies a single `FontStyle="Italic"` at the `TextBlock` level. So the *Title* and *Thought* fields lose any inline italics they may carry, the `<br>` in the copyright line collapses, and any future markup added to the DB will silently disappear. Closing the gap requires either a `RichTextBlock` with an inline parser or pre‑processing the DB strings into `Run`s. |
+| 10.1.2 | 🔴 | **Loading & empty/error logic is not equivalent.** | Xamarin combines `HasError` and `GetReflectionCommand.IsRunning` via `AllFalseMultiConverter` so that the content stack hides while the spinner shows. Uno's `ShowContent(bool, bool)` helper returns `Visible` only when both are false — fine — but the `ProgressRing` is layered *under* the StackPanel inside the same `Grid`, while in Xamarin the `ActivityIndicator` is the last child of the `Grid` (so it z‑orders on top). Net effect: on Uno the `ProgressRing` is partially hidden behind whatever content was previously rendered; on Xamarin it sits centred above. |
+| 10.1.3 | 🟠 | **The "first label" iOS workaround is gone.** | Xamarin places an empty `Label TextType="Html"` with `HeightRequest=0` as the first child on iOS only (commented "first element with TextType='Html' doesn't get rendered on first load for some reason"). Because Uno strips HTML entirely, the workaround is moot — but worth flagging in case a future Uno port re‑adds HTML rendering, the same iOS first‑load bug may resurface. |
+| 10.1.4 | 🟠 | **Initial load semantics differ.** | Xamarin: `OnAppearing` calls `vm.Init()` via `MainThread.BeginInvokeOnMainThread`, and `Init` guards via `_initialized` so the call is once‑per‑VM. Uno: `Loaded` fires `GetDailyReflectionCommand.ExecuteAsync(null)` directly with no idempotency guard — every time the page is materialised the command re‑runs. Combined with 10.1.5, this means navigating away and back re‑hits the database. `vm.Init()` is never called on the Uno port at all. |
+| 10.1.5 | 🟠 | **Page lifetime differs.** | Xamarin's Shell holds one `DailyReflectionView`; `OnAppearing` fires per visit. Uno registers `DailyReflectionPage` as `Transient` (App.xaml.cs line 56) and uses `Region.Navigator="Visibility"` — depending on how the region navigator caches, the page may be either kept hidden (singleton‑ish) or recreated. Either way, `Loaded` is *not* the same event boundary as `OnAppearing`. |
+| 10.1.6 | 🟠 | **Toolbar / title placement.** | Xamarin sets `Title="{Binding Date, StringFormat='{0:MMMM d}'}"` on the page so Shell renders it as the navigation‑bar title. Uno injects the formatted date into `CommandBar.Content` instead — visually the title sits inside the toolbar rather than as a navigation title. |
+| 10.1.7 | 🟠 | **`EventToCommand` replaced with code‑behind.** | The `DateChangedEventArgsConverter` in `/Converters` is unused; Uno's `DatePickerFlyout_DatePicked` mutates the VM directly. Functionally equivalent, but moves logic out of XAML. |
+| 10.1.8 | 🟡 | **Automation IDs are not applied.** | `DailyReflectionView.xaml` decorates every label and toolbar item with `AutomationId="{x:Static constants:AutomationConstants.DR_*}"`. The shared `DailyReflection.Core/Constants/AutomationConstants.cs` still ships those constants, but **no Uno page references them**. UI tests written against `DR_Reflection_Title`, `DR_Share_Reflection`, `DR_Change_Date`, etc. will not work against the Uno build. The WinUI equivalent is `AutomationProperties.AutomationId="..."`. |
+| 10.1.9 | 🟡 | **Custom date picker is gone.** | Xamarin uses a `<controls:CustomDatePicker IsVisible="False">` driven by `EventToCommandBehavior` so the *Title‑bar* date format and behaviour stay consistent across Android/iOS via `CustomDatePickerRenderer`. Uno replaces this with `DatePickerFlyout` (modal). Visually different (a popup dialog vs. a focused inline picker) and not customised per‑platform. |
+| 10.1.10 | 🟡 | **Page `Resources` dictionary contains a stale entry.** | `DailyReflectionPage.xaml` declares `<converters:PluralityConverter x:Key="YearsPluralityConverter">` even though it is never bound on this page; that resource only made sense on `SobrietyTimePage`. Likely a copy‑paste leftover. |
+
+### 10.2 Sober Time page
+
+Reference files:
+* Xamarin: `Views/SobrietyTimeView.xaml(.cs)`
+* Uno: `Views/SobrietyTimePage.xaml(.cs)`
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.2.1 | 🔴 | **`SoberDate` null check uses the wrong converter on Uno.** | Xamarin uses `Xamarin.CommunityToolkit.IsNotNullOrEmptyConverter` (registered in App.xaml as `NullToBoolConverter`). Uno's `NullToBoolConverter` (`Converters/NullToBoolConverter.cs`) returns `Visibility.Visible` when the value is *not* null — that part is fine — but `Visibility="{x:Bind ViewModel.SoberDate, Mode=OneWay, Converter=...}"` cannot fire on an x:Bind of a `DateTime?` property the same way `OneWay` Binding did when only the value (not "has value") changes. After `SettingsViewModel` writes a new `SoberDate`, Uno's `SobrietyTimeViewModel.SoberDate` setter does fire, so the binding *will* re‑evaluate, but only because of `[ObservableProperty]` raising `OnPropertyChanged(nameof(SoberDate))`. Worth confirming with a runtime test: change preference → does the calendar block become visible without restart? |
+| 10.2.2 | 🟠 | **No `OnAppearing` activation hook.** | Xamarin's `SobrietyTimeView.OnAppearing` sets `vm.IsActive = true` so the messenger registrations come back online when the user re‑enters the tab. Uno's `SobrietyTimePage` sets `IsActive = true` once in the constructor and never resets. With a Transient page that's fine, but if the page is ever cached / region navigated, the messenger handlers might double‑register or never re‑activate. |
+| 10.2.3 | 🟠 | **Layout grid changed shape.** | Xamarin's outer grid is `RowDefinitions="20, Auto, *, Auto, Auto, *, Auto"` (top spacer + flexible pushers). Uno keeps the same row template, but inserts a separate `TextBlock Grid.Row="0"` with the page title (because Uno has no Shell title) — that title eats vertical space that didn't exist on Xamarin, so the visual centring of the date+period block is shifted. |
+| 10.2.4 | 🟡 | **Automation IDs missing.** | `Sobriety_Time` and `ST_One_Day_At_A_Time` are still defined in `AutomationConstants`. Neither shows up in `SobrietyTimePage.xaml`. |
+| 10.2.5 | 🟡 | **`DisplayPreferenceString` instead of `x:Static`.** | Xamarin: `IsDaysMonthsYearsDisplayPreferenceConverter` is parameterised with `DisplayPreference="{x:Static models:SoberTimeDisplayPreference.DaysMonthsYears}"` — type‑safe enum reference. Uno passes the **string** `"DaysMonthsYears"` and parses it back inside the converter. A typo here goes undetected at compile time. |
+| 10.2.6 | 🟡 | **Empty `OnUnloaded` handler.** | `SobrietyTimePage.xaml.cs` registers `Unloaded += OnUnloaded` and `OnUnloaded` is empty. Either set `IsActive = false` here (matching Xamarin's `OnDisappearing` semantics) or remove the dead handler. |
+
+### 10.3 Settings page
+
+Reference files:
+* Xamarin: `Views/SettingsView.xaml(.cs)`
+* Uno: `Views/SettingsPage.xaml(.cs)`
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.3.1 | 🔴 | **No `OnDisappearing` deactivation.** | Xamarin's `SettingsView` flips `vm.IsActive = false` on `OnDisappearing`; Uno never deactivates. `WeakReferenceMessenger` recipients keep accumulating because `Register` is called once in the constructor (line 31) but the matching `UnregisterAll` is never invoked. The page is Transient, so multiple navigations create multiple instances all subscribed to `NotificationPermissionRequestMessage`. The first reply wins (`AsyncRequestMessage<bool>`), but every additional instance leaks until GC. |
+| 10.3.2 | 🔴 | **Permission‑dialog "OK" no longer routes the user to Settings.** | Xamarin's flow: `DisplayAlert` returns `bool`, the VM uses that result via `m.Reply(...)`, and on `true` the VM calls `INotificationService.ShowNotificationSettings()`. Uno's `ShowPermissionDialogAsync` returns `result == ContentDialogResult.Primary` correctly — but on the desktop target `INotificationService.ShowNotificationSettings()` is a **no‑op** (`PlatformServices/NotificationService.cs` line 24). So if a user has notifications denied on Windows/Linux/macOS, hits "OK", the dialog closes and *nothing else happens*. |
+| 10.3.3 | 🔴 | **`TableView Intent="Settings"` look is gone.** | The original used MAUI/Xamarin's native settings table look (grouped sections with iOS chrome / Android Material). Uno re‑builds it as plain `Grid` cards. This is a known consequence of WinUI not having `TableView`, but it is a visual regression vs. the source app. |
+| 10.3.4 | 🟠 | **`NotificationTime` rebases the date to today.** | Xamarin stores the picker time as a `TimeSpan` (via `DateTimeToTimeSpanConverter`) and writes it back into the VM's `DateTime` preserving the original date component (the existing stored DateTime). Uno's `NotificationTimePicker_TimeChanged` does `ViewModel.NotificationTime = DateTime.Today.Add(e.NewTime)`. Net effect: the DateTime stored in preferences flips to today's date every time the user touches the time picker. The shared `SettingsViewModel.NotificationTime` setter pushes that to `SettingsService`, which on Android mirrors it as `DateTime.ToBinary()` to `SharedPreferences`. The receiver code reads it back via `DateTime.FromBinary(timePref)` and uses only `.TimeOfDay`, so functionally it still works — but the persisted DateTime is no longer comparable across days, which subtly contradicts the migration semantics in `App.MigrateSettingsIfNeeded` if it ever runs on a value written by the Uno port. |
+| 10.3.5 | 🟠 | **Notification time tap is gated by `NotificationsEnabled` differently.** | Xamarin: `TextCell IsEnabled="{Binding NotificationsEnabled}"` plus `TimePickerLabelEnabledConverter` which **always returns true on Android** (so the time label remains tappable on Android even when notifications are off — Xamarin's intentional UX choice). Uno: the wrapping `Grid` has `IsEnabled="{x:Bind ViewModel.NotificationsEnabled, Mode=OneWay}"` and additionally `NotificationTime_Tapped` early‑returns if `ViewModel.NotificationsEnabled` is false. Net effect: on Uno's Android target the row is greyed out and untappable, contradicting the Xamarin design. `TimePickerLabelEnabledConverter` exists in Xamarin but **was not ported to Uno** at all. |
+| 10.3.6 | 🟠 | **`MaxDate` type mismatch.** | The shared `SettingsViewModel.MaxDate` is a `DateTimeOffset`. Xamarin's `CustomDatePicker` binds `MaximumDate` (a `DateTime`) so Forms's binding engine performs the conversion. Uno binds `CalendarDatePicker.MaxDate` which is a `DateTimeOffset` — fine — but compiled `x:Bind` is strict: if anyone changes the VM property type to `DateTime`, the Uno page fails to compile while the Xamarin page would still work via the BindingValueConverter. Inverse risk: if the binding converter ever becomes lossy across local/utc boundary, the picker may drift by one day around midnight. |
+| 10.3.7 | 🟠 | **App version is hard‑coded.** | `SettingsPage.xaml.cs` exposes `AppVersion => VersionConstants.VersionNumber` (literal string `"1.0.0"`). Xamarin reads `VersionTracking.CurrentVersion` from `Xamarin.Essentials`. The Uno value will never reflect the actual installed build. |
+| 10.3.8 | 🟡 | **`SoberTimeDisplay_Tapped` event handler in code‑behind.** | All three rows on Settings now have tap event handlers + visibility toggles. Xamarin had the same pattern. Net result: not strictly worse, but the Uno code grows three event handlers + three picker controls hidden in the tree. Consider using `Flyout` similar to the Daily Reflection toolbar for cleaner UX. |
+| 10.3.9 | 🟡 | **No automation IDs.** | `Settings`, `Settings_Enable_Notif_Switch`, `Settings_Time_Picker`, `Settings_Date_Picker`, `Settings_Notification_Time`, `Settings_Sober_Date` — none referenced in `SettingsPage.xaml`. |
+
+### 10.4 Navigation shell
+
+Reference files:
+* Xamarin: `Views/AppShell.xaml(.cs)`
+* Uno: `Views/MainPage.xaml(.cs)` + `App.xaml.cs` (`RegisterRoutes`)
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.4.1 | 🟠 | **Tab icon font‑family mismatch.** | Xamarin renders the `ClockIcon` from `FaRegularFont`. Uno's `MainPage.xaml` uses `FontAwesomeRegular` for the *clock* glyph (correct) but uses `FontAwesomeSolid` for the *book* (Reflection) glyph and *gear* (Settings) glyph — same as Xamarin's `ReflectionIcon`/`SettingsIcon`, which were `FaSolidFont`. So tab icons match. **However** `Uno's MainPage` uses `Content="Reflection"` / `"Sober Time"` / `"Settings"` for the tab labels — Xamarin's Shell rendered the `Title` attribute. Uno labels are correct, but `TabBarItem.Content` is rendered both as visible label *and* as accessible name; Xamarin's Shell rendered the title as a separate, navigation‑bar text. |
+| 10.4.2 | 🟠 | **Shell theming lost.** | Xamarin's `App.xaml` registers a `BaseStyle` targeting `Element` with `ApplyToDerivedTypes="True"` that sets `Shell.BackgroundColor`, `Shell.ForegroundColor`, `Shell.TabBarBackgroundColor`, `Shell.NavBarHasShadow`, `Shell.UnselectedColor`, `Shell.TabBarTitleColor`. Several of these values use `OnPlatform` (`#1976D2` on Android vs. `BackgroundColorLight` on iOS for Shell background; `iOSSystemBlue` for foreground) so the iOS app gets light navbar / blue text, the Android app gets material blue navbar / white text. **None of this lives in the Uno port.** The Uno `TabBar` uses default Uno.Toolkit theming — it neither matches the Android Material blue navbar nor the iOS light navbar. The "primary blue" `#1976D2` is preserved as a colour resource but is never wired into the navigation chrome. |
+| 10.4.3 | 🟠 | **Page background colour rule lost.** | Xamarin's `App.xaml` has `<Style TargetType="Page" ApplyToDerivedTypes="True">` setting `BackgroundColor="{AppThemeBinding Dark={StaticResource BackgroundColorDark}, Light={StaticResource BackgroundColorLight}}"`. Uno pages set `Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"`, which is the WinUI default (close to `#FFFFFF`/`#000000`), not the original `#EFF2F5`/`#121212`. |
+| 10.4.4 | 🟠 | **Label default text colour lost.** | `<Style TargetType="Label">` sets `TextColor` to `TextPrimaryColorDark`/`TextPrimaryColorLight`. Uno's `TextBlock`s default to WinUI's `TextFillColorPrimaryBrush`, which is close (FFE4E4E4 / dark, 1F1F1F / light) but not pixel‑identical. |
+| 10.4.5 | 🟡 | **`Shell.TabBarTitleColor = #1976D2` not replicated.** | Selected tab title was deliberately blue. Uno uses Toolkit defaults. |
+
+### 10.5 Notifications
+
+Reference files:
+* Xamarin: `DailyReflection.iOS/Services/NotificationService.cs`, `DailyReflection.Android/Services/NotificationService.cs`, `DailyReflection.Android/BroadcastReceivers/*`, `Permissions/NotificationPermission.cs`.
+* Uno: `PlatformServices/NotificationService.{cs,iOS.cs,Android.cs}`, `Platforms/Android/BroadcastReceivers/*`.
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.5.1 | 🔴 | **Desktop notifications: hard no‑op.** | `PlatformServices/NotificationService.cs` returns `false`/`Task.FromResult(false)` from `CanScheduleNotifications` and `TryScheduleDailyNotification`, and is empty for `CancelNotifications`/`ShowNotificationSettings`. The Settings UI on Windows / macOS desktop / Linux toggles `NotificationsEnabled = true`, persists it, but no toast ever fires. There is also no UI affordance telling the user it's a no‑op — they will believe notifications are on. |
+| 10.5.2 | 🔴 | **iOS Sound channel.** | Xamarin's iOS `UNMutableNotificationContent` does **not** set `Sound`. Uno sets `Sound = UNNotificationSound.Default`. Ostensibly an *improvement*, but it is a behaviour change: any user who silenced the original app via the system per‑app sound setting will be surprised. |
+| 10.5.3 | 🔴 | **iOS authorisation options widened.** | Xamarin requests `UNAuthorizationOptions.Alert`. Uno requests `Alert | Badge | Sound`. Apple's permission dialog is "all‑or‑nothing" so this means new installs of the Uno port will be asked for badge + sound on top of alert, where the original only asked for alert. Existing users on the original who upgrade to the Uno binary will not be prompted again (their `Authorized` state covers the wider set). |
+| 10.5.4 | 🟠 | **iOS notification identifier.** | Xamarin uses `MessageId.ToString()` where `MessageId = 1` → identifier `"1"`. Uno uses `"DailyReflectionNotification"`. Different ids, so a user who had the Xamarin app installed and updates to the Uno build will see the old identifier orphaned (until `RemoveAllPendingNotificationRequests` runs at the next schedule, which Uno does — so safe in practice; just worth documenting if a side‑by‑side install is ever tried). |
+| 10.5.5 | 🟠 | **iOS `CancelNotifications` is more aggressive on Uno.** | Xamarin: `RemoveAllPendingNotificationRequests`. Uno: `RemoveAllPendingNotificationRequests` + `RemoveAllDeliveredNotifications` + `ApplicationIconBadgeNumber = 0`. Different observable behaviour: opening the Uno app silently dismisses any delivered (still on lock screen) reflection notifications and wipes the app icon badge. Probably desirable, but again a deliberate behaviour change vs. the original. |
+| 10.5.6 | 🟠 | **iOS `Subtitle` dropped.** | Xamarin sets `Subtitle = ""`. Uno omits the property entirely. Visually identical (empty subtitle vs. unset both render no subtitle row), but worth a sanity check on iPad where subtitles can render. |
+| 10.5.7 | 🟠 | **Android notification title.** | Xamarin: `SetContentTitle("Time for the daily reflection!")` only — no body. Uno: `SetContentTitle("Daily Reflection")` + `SetContentText("Time for the daily reflection!")`. Different layout in the notification shade. |
+| 10.5.8 | 🟠 | **Android `Priority` was unset on Xamarin.** | Uno calls `SetPriority(NotificationCompat.PriorityDefault)`; Xamarin never set a priority at all. Effectively the same default but explicit on Uno. |
+| 10.5.9 | 🟠 | **Android receiver `Exported` flag.** | Xamarin's `DailyNotificationReceiver` is `[BroadcastReceiver(Enabled = true)]` (no `Exported`). Uno is `[BroadcastReceiver(Enabled = true, Exported = false)]`. `Exported=false` is correct for an internal alarm receiver and is more secure; just a behaviour delta. |
+| 10.5.10 | 🟠 | **Android pending intent flags differ.** | Xamarin: `ActivityFlags.ClearTop`. Uno: `ActivityFlags.ClearTop \| ActivityFlags.SingleTop`. Uno's choice prevents stacking multiple `MainActivity` instances when the user repeatedly taps reflection notifications without dismissing — better behaviour, but a delta. |
+| 10.5.11 | 🟠 | **Android permission API.** | Xamarin uses `Xamarin.Essentials.Permissions.CheckStatusAsync<NotificationPermission>()` with a custom `NotificationPermission : BasePlatformPermission` that lists `POST_NOTIFICATIONS` only on API 33+. Uno uses `Uno.Extensions`'s `PermissionsHelper.CheckPermission(Android.Manifest.Permission.PostNotifications, ...)`. Functionally equivalent on Tiramisu+; on older API levels Xamarin's permission list is empty (always granted), Uno hard‑codes `return true`. Same result, different code path. |
+| 10.5.12 | 🟠 | **Android receiver re‑schedule path mutates state on the singleton.** | Both implementations new‑up a `NotificationService()` from inside the receiver and call `TryScheduleDailyNotification(..., shouldRequestPermission: false)`. Uno wraps this in a `try { … } catch { /* silently fail */ }` — Xamarin does not. Uno is more defensive, but silently swallowing exceptions hides bugs. Consider logging. |
+| 10.5.13 | 🟠 | **`channel.SetSound()` not called.** | Neither port calls `NotificationChannel.SetSound`; Xamarin gets away with it because each posted notification calls `SetSound(RingtoneManager.GetDefaultUri(...))`. Uno does the same — fine on both — but on Android 8+ the system officially prefers channel‑level sound. Latent issue carried over. |
+| 10.5.14 | 🟡 | **Three new manifest permissions in Uno.** | Uno's `AndroidManifest.xml` declares `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `WAKE_LOCK`. The Xamarin original declares **none** of these and still works because (a) `SetAndAllowWhileIdle` is best‑effort, (b) target SDK 33 means `SCHEDULE_EXACT_ALARM` is granted by default, and (c) wake locks are not used. The Uno declarations don't break anything but they do require Play Store policy answers (especially `USE_EXACT_ALARM` requires a calendar/alarm‑clock policy declaration). If the goal is to match the original's submission profile, **drop these three permissions** — the existing alarm code will continue to work without them. |
+| 10.5.15 | 🟡 | **No `DailyReflection.Uno.Droid.MainActivity` reference resilience.** | The Uno receiver hard‑codes `typeof(DailyReflection.Uno.Droid.MainActivity)` for the launch intent. If `MainActivity.Android.cs` is renamed or moved, the receiver fails silently. Xamarin's receiver does the same with `typeof(MainActivity)` so this is even, but worth a comment. |
+
+### 10.6 Settings persistence
+
+Reference files:
+* Xamarin: `DailyReflection.Services/Settings/SettingsService.cs` (cross‑platform, `IPreferences`).
+* Uno: `PlatformServices/SettingsService.cs` + `SettingsService.Android.cs`.
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.6.1 | 🔴 | **No `MigrateOldPreferences` trigger.** | The shared `ISettingsService.MigrateOldPreferences` exists; Uno's implementation is `Get → Set` of the same three keys. But `App.OnLaunched` never calls it (and `VersionTracking.IsFirstLaunchForCurrentBuild` is not available without re‑plumbing). So the migration code is dead. If a user upgrades from a Xamarin‑era install (even hypothetically) the legacy `Xamarin.Essentials` preferences container won't be touched. |
+| 10.6.2 | 🔴 | **Cross‑platform `MigrateOldPreferences` semantics differ.** | Xamarin's `SettingsService.MigrateOldPreferences()` reads from `Xamarin.Essentials.Preferences` (default container, not `DR_Settings`) and writes them into `DR_Settings`. Uno's implementation just round‑trips values inside `LocalSettings` — it never reads from any "old" container. So even if it were called, it would do nothing useful. |
+| 10.6.3 | 🟠 | **`Get<T>` fallback path silently downgrades.** | If `LocalSettings` holds a value of the wrong runtime type, Uno tries `Convert.ChangeType(value, typeof(T))` and on exception returns `defaultValue`. The shared `ISettingsService` contract (Xamarin) raises an exception on type mismatch (because `IPreferences` is type‑specific). The Uno port is more permissive — easier to debug, but masks the kind of mismatch that the version‑tracking migration was designed to detect. |
+| 10.6.4 | 🟠 | **`DateTime.ToBinary()` round‑trip stores `Kind`.** | Xamarin's `IPreferences.Set(key, DateTime)` (Android impl) stores ISO‑8601 strings via `XmlConvert.ToString(value, XmlDateTimeSerializationMode.RoundtripKind)` and reads back with `DateTimeKind.Local`. Uno stores `DateTime.ToBinary()` — also round‑trip‑safe — but a value written by the Xamarin app cannot be read by the Uno app and vice‑versa (different binary encodings). On a fresh install this is invisible; on a side‑by‑side replacement you would lose the user's settings. |
+| 10.6.5 | 🟠 | **Android `SharedPreferences` mirror is *write‑only*.** | `SettingsService.Android.cs` mirrors `Set` to the `DR_Settings` SharedPreferences for the receivers, but `Get<T>` always reads from `LocalSettings` first. If the `LocalSettings` file is wiped (re‑install, app‑data clear) and the Android SharedPreferences survive (Backup Manager, etc.), the foreground app will *not* recover settings from the mirror — the receivers will keep firing notifications based on the stale SharedPreferences value, but the UI will show defaults. |
+| 10.6.6 | 🟠 | **`null` handling.** | Xamarin's `SettingsService.Set<T>` does not have a special path for `null`. Uno's `MirrorSet<T>` calls `editor.Remove(key)` when value is null, but the corresponding `LocalSettings` write at line 67 stores the literal `null`. `LocalSettings.Values[key] = null` actually *removes* the key in WinUI semantics — the two stores converge — but the logic isn't symmetric and is worth a comment. |
+| 10.6.7 | 🟡 | **Constructor reads `ApplicationData.Current.LocalSettings` eagerly.** | Calling `ApplicationData.Current` on a non‑packaged Linux/macOS framebuffer build can throw. Uno generally handles this, but the constructor offers no graceful fallback. |
+
+### 10.7 Sharing
+
+Reference files:
+* Xamarin: `DailyReflection.Services/Share/ShareService.cs` (uses `Xamarin.Essentials.IShare`).
+* Uno: `PlatformServices/ShareService.cs` (uses `DataTransferManager`).
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.7.1 | 🔴 | **Race condition on concurrent shares.** | Uno's `ShareService` keeps `_pendingTitle`/`_pendingBody` as instance fields. `ShareText` mutates them, calls `ShowShareUI` (sync), and then `-=` the handler in `finally`. If a second `ShareText` runs before the first's `DataRequested` fires (it can — `ShowShareUI` is async on some platforms), the second call's title/body overwrite the first. Xamarin's `IShare.RequestAsync(new ShareTextRequest(...))` is intrinsically value‑typed and free of this hazard. Lock the service or pass the values via the `DataRequested` closure. |
+| 10.7.2 | 🔴 | **Silently does nothing on platforms where `DataTransferManager.IsSupported() == false`.** | Linux (X11) returns false from `IsSupported`. The reflection share button on Linux does nothing — no error, no fallback. Xamarin's `IShare` would have thrown `NotImplementedOnPlatform` (or similar). |
+| 10.7.3 | 🟠 | **`GetForCurrentView()` on Skia desktop.** | `DataTransferManager.GetForCurrentView()` is a UWP/WinAppSDK API; on Skia desktop targets Uno provides a polyfill. Recent Uno versions (5.x+) prefer `IDataTransferManagerInterop` via `WinRT.Interop.WindowNative.GetWindowHandle(window)`. The current code may degrade on macOS/Linux desktop. Validate against Uno 6.x docs. |
+| 10.7.4 | 🟡 | **`+=`/`-=` of `DataRequested` per call.** | The handler is hooked and unhooked on every share call. If `ShowShareUI` throws synchronously the handler is removed before `DataRequested` can fire. Move handler registration into the constructor. |
+
+### 10.8 App lifecycle, DI, configuration
+
+Reference files:
+* Xamarin: `App.xaml.cs`, `Startup.cs`, `MainActivity.cs`, `AppDelegate.cs`.
+* Uno: `App.xaml.cs`, `DependencyInjection/Dependencies.cs`, `Platforms/{Android,iOS,Desktop}/*`.
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.8.1 | 🔴 | **`VersionTracking.Track()` not called.** | Xamarin's `App` constructor calls `VersionTracking.Track()` so `IsFirstLaunchEver`, `IsFirstLaunchForCurrentVersion`, `IsFirstLaunchForCurrentBuild`, `CurrentBuild`, `PreviousBuild` are populated on every app start. Uno never calls it. There is no equivalent in `Uno.Extensions` (it lives in MAUI Essentials). All version‑gated code paths are therefore dead on the Uno port. |
+| 10.8.2 | 🔴 | **`MigrateSettingsIfNeeded` not called.** | Logic that was the entire point of `SettingsService.MigrateOldPreferences` and the `NewSettingsVersion`/`NewSettingsBuild` constants. Without it, a hypothetical migration from the original Xamarin install to a future Uno install loses preferences. |
+| 10.8.3 | 🔴 | **`RefreshDatabaseIfNeeded` not called.** | The shared `IDailyReflectionDatabase.RefreshDatabaseFile()` exists and works (it deletes the cached `dailyreflections.db` and re‑extracts it from embedded resources). The Xamarin original calls it once, gated on a build version bump (`RefreshDatabaseBuild = 32`). Uno never calls it, so any future content update to the embedded database will not be picked up by users on existing installs. |
+| 10.8.4 | 🟠 | **Notification re‑schedule on settings migration is also gone.** | Xamarin's `MigrateSettingsIfNeeded` re‑schedules notifications post‑migration via `INotificationService.TryScheduleDailyNotification`. Without the migration trigger, this can't run. |
+| 10.8.5 | 🟠 | **Page registration is Transient on Uno, Singleton on Xamarin.** | Xamarin's `services.AddPages()` uses `AddAllSubclassesOf<Page>(ServiceLifetime.Singleton)`. Uno explicitly registers each of the four pages as `AddTransient`. Combined with `Region.Navigator="Visibility"`, in practice each page is materialised once per region instance — but there's no longer a single resolved instance through DI, so anything that injects a `Page` directly would get a fresh one each time. (Currently nothing does, so safe.) |
+| 10.8.6 | 🟠 | **Logging: console only.** | Xamarin uses `host.ConfigureLogging(builder => builder.AddConsole())`. Uno's `InitializeLogging` is wrapped in `#if DEBUG` and uses platform‑aware providers (WASM/iOS/console) — but the DI host's `LoggerFactory` is *not* connected back into `Uno.Extensions.LogExtensionPoint` outside DEBUG, so release builds produce no logs at all. Xamarin produced console logs in release. |
+| 10.8.7 | 🟠 | **Configuration source.** | Xamarin: `EmbeddedFileProvider` over the assembly + `AddJsonFile("appsettings.json")`. Uno: `UseConfiguration(c => c.EmbeddedSource<App>())`. Equivalent in result, different in error mode (Uno's `EmbeddedSource` is silent if the file is missing; Xamarin throws). |
+| 10.8.8 | 🟡 | **`App.GetService<T>()` static accessor.** | Uno introduces a static service locator (`App.GetService<DailyReflectionViewModel>()`) used by every page constructor. Xamarin used `Startup.ServiceProvider.GetService<T>()` for the same purpose, so there's no functional regression — but both are anti‑patterns vs. constructor injection from a `ViewMap`/`RouteMap`. Worth migrating to `IServiceProvider`‑injected views per Uno.Extensions Navigation guidance. |
+
+### 10.9 Manifests, permissions, capabilities
+
+Reference files:
+* Xamarin: `DailyReflection.Android/Properties/AndroidManifest.xml`, `DailyReflection.iOS/Info.plist`.
+* Uno: `Platforms/Android/AndroidManifest.xml`, `Platforms/iOS/Info.plist`, `Package.appxmanifest`.
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.9.1 | 🟠 | **Bundle/package id changed.** | Xamarin: `com.kazo0.dailyreflection`. Uno: `com.kazo0.dailyreflectionuno` (csproj `ApplicationId`). New install identity — they coexist on a device, but ratings/IAP/etc. don't transfer. |
+| 10.9.2 | 🟠 | **iOS supported orientations changed.** | Xamarin iPhone: portrait + portrait‑upside‑down only. Uno iPhone: portrait + landscape‑left + landscape‑right (no upside‑down, plus landscape allowed). Different iPad orientations too — Xamarin allows portrait‑upside‑down + landscapes, Uno same. Net: Uno iPhone now rotates to landscape, which the original explicitly forbids. |
+| 10.9.3 | 🟠 | **iOS minimum OS version moved.** | Xamarin: `MinimumOSVersion=9.0` in Info.plist. Uno: relies on the csproj `SupportedOSPlatformVersion` (15.0 by default for net10.0‑ios). Drops support for everything pre‑iOS 15. |
+| 10.9.4 | 🟠 | **iOS launch storyboard removed.** | Xamarin: `UILaunchStoryboardName=LaunchScreen`. Uno: replaced with the SVG splash via `Uno.Resizetizer`. Different launch UX. |
+| 10.9.5 | 🟠 | **iOS app fonts both register the same OTFs**, but Uno's `Info.plist` does **not** set `CFBundleIdentifier`, `CFBundleName`, `CFBundleDisplayName`, `CFBundleShortVersionString`, `CFBundleVersion` — those come from the csproj. Behaviour is the same; just worth knowing for tooling that scrapes Info.plist. |
+| 10.9.6 | 🟠 | **Android `RECEIVE_BOOT_COMPLETED` is declared on both** but Uno additionally declares `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `WAKE_LOCK` (see 10.5.14). Drop these to match the original. |
+| 10.9.7 | 🟠 | **Android target/min SDK invisible in Uno manifest.** | Xamarin: `<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33"/>` is explicit in the manifest. Uno: relies on csproj `SupportedOSPlatformVersion`/`TargetPlatformVersion`. The runtime min/target may differ from the original 21/33 unless the csproj is verified. |
+| 10.9.8 | 🟡 | **Windows/desktop capabilities.** | `Package.appxmanifest` declares `runFullTrust`. The original Xamarin app has no Windows manifest at all. Net new — fine. |
+
+### 10.10 Resources, fonts, theming
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.10.1 | 🔴 | **`Visual="Material"` semantics absent.** | Xamarin's Shell + every page declares `Visual="Material"` and the project references `Xamarin.Forms.Visual.Material`. This applies Material Design renderers to all controls on Android specifically (Material `EditText`, `Button`, etc.). Uno on Android renders via Skia (or native depending on TFM) and has no "make‑Android‑look‑like‑Material" toggle of the same scope. Visual difference on Android: text inputs and buttons render with WinUI's Fluent default, not Material. |
+| 10.10.2 | 🟠 | **Original colour palette only partially applied.** | `Colors.xaml` brings over `Primary=#1976D2`, `BackgroundColorDark/Light`, `TextPrimaryColor*`, plus the WinUI default `Gray100..Gray950`/`MidnightBlue`/`OffBlack` palette. Original Xamarin had a leaner palette focused on the blue + 2 backgrounds + 2 text colours. The Uno port hasn't *removed* the originals, but they no longer drive the Shell or Page chrome (see 10.4.2 / 10.4.3). |
+| 10.10.3 | 🟠 | **Font glyph keys renamed.** | Xamarin: `<FontImage x:Key="ReflectionIcon|SettingsIcon|ShareIcon|ClockIcon|CalendarIcon">`. Uno: replaced with `<x:String x:Key="Calendar|Book|Gear|Clock|Share">` (raw glyph strings) + per‑use `<FontIcon FontFamily=… Glyph=…>`. Equivalent functionally. The `*Icon` keys are removed, so any future XAML referencing `{StaticResource ShareIcon}` will fail to compile. |
+| 10.10.4 | 🟠 | **`AppThemeBinding` replaced inconsistently.** | Where Xamarin used `{AppThemeBinding Dark=…, Light=…}`, Uno uses `{ThemeResource Foo}` against WinUI brushes (e.g. `TextFillColorSecondaryBrush`). For Page background and Label colour the substitution is incomplete (see 10.4.3 / 10.4.4). |
+| 10.10.5 | 🟡 | **Three new converters defined but unused on most pages.** | `BoolToVisibilityConverter` (with `Invert`), `AllFalseBoolToVisibilityConverter`, `HasValueConverter`, `InverseBoolConverter`, `InverseBoolToVisibilityConverter` — only some are referenced. Dead code candidates: `InverseBoolConverter`, `InverseBoolToVisibilityConverter`, `AllFalseBoolToVisibilityConverter`, `HasValueConverter`. |
+
+### 10.11 Tests
+
+| # | Severity | Gap | Detail |
+|---|---|---|---|
+| 10.11.1 | 🟠 | **No Uno‑specific UI/integration tests.** | Xamarin shipped `DailyReflection.UITests` (Xamarin.UITest project). Nothing analogous for the Uno port. Uno.UI tests would normally use `Uno.UITest` or playwright‑style WebAssembly tests; neither is configured. |
+| 10.11.2 | 🟠 | **`AutomationProperties.AutomationId` not applied** anywhere in Uno views (see 10.1.8, 10.2.4, 10.3.9). Even if a UI‑test harness is added, today the views provide no stable selectors for it. |
+| 10.11.3 | 🟡 | **Test TFMs lag.** | `DailyReflection.Presentation.Tests` and `DailyReflection.Services.Tests` target net9.0 while the shared libraries target net10.0. The CI command in `CLAUDE.md` runs them out‑of‑band. Bump to net10.0 to match. |
+
+### 10.12 Summary punch list (Uno → Xamarin parity)
+
+The minimum work to bring the Uno port to behavioural parity with the Xamarin original, ordered by impact:
+
+1. **Wire `VersionTracking` + run `MigrateSettingsIfNeeded` and `RefreshDatabaseIfNeeded`.** Implement a small `LocalSettings`‑backed version tracker (~20 LOC). Trigger from `App.OnLaunched` after `Host` is built. (10.6.1, 10.6.2, 10.8.1‑3.)
+2. **Build a working desktop notification path** — Windows toast via `AppNotificationBuilder` (`Microsoft.Windows.AppNotifications`), macOS via `UNUserNotificationCenter` from the AppKit bridge, Linux via `libnotify` or skip with a clear toast/inline message. At minimum gate the `NotificationsEnabled` toggle on `CanScheduleNotifications` so the user can't silently enable a no‑op. (10.5.1, 10.3.2.)
+3. **Render reflection HTML emphasis** — port the DB strings through a small inline parser into a `RichTextBlock`, or strip and italicise the reading + the copyright line specifically. (10.1.1.)
+4. **Re‑apply original Shell theme** — Page background + Label foreground + tab bar background/foreground match the `#1976D2`/`#EFF2F5`/`#121212` palette per platform. (10.4.2, 10.4.3, 10.4.4, 10.10.4.)
+5. **Add `AutomationProperties.AutomationId` to every control** referenced in `AutomationConstants`. Free, mechanical, unblocks UI tests. (10.1.8, 10.2.4, 10.3.9, 10.11.2.)
+6. **Fix `NotificationsEnabled` UX on Android** to match `TimePickerLabelEnabledConverter` (always tappable on Android). Port the converter or special‑case `NotificationTime_Tapped`. (10.3.5.)
+7. **Fix `NotificationTime` time‑setter** so it preserves the date component instead of re‑basing to today. (10.3.4.)
+8. **Stop the `WeakReferenceMessenger` recipient leak** on Settings — call `vm.IsActive = false` and `WeakReferenceMessenger.Default.UnregisterAll(this)` on `Unloaded` (and set the same pattern on Sober Time, 10.2.2). (10.3.1, 10.2.6.)
+9. **Make `ShareService` thread‑safe** — capture title/body in the `DataRequested` handler closure, not on instance fields; register the handler once. Add fallback for non‑`IsSupported` platforms. (10.7.1, 10.7.2.)
+10. **Replace hard‑coded `AppVersion`** with the runtime build version once `VersionTracking` is in place. (10.3.7.)
+11. **Drop the three extra Android permissions** (`SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `WAKE_LOCK`) unless Uno specifically needs them. (10.5.14, 10.9.6.)
+12. **Restore iOS supported orientations** to portrait + portrait‑upside‑down on iPhone (no landscape on phones). (10.9.2.)
+13. **Realign iOS notification options** — drop `Badge | Sound` from `RequestAuthorizationAsync` to match the original `Alert`‑only request, *or* add a one‑off explanatory copy in the permission dialog. (10.5.3.)
+14. **Decide `CancelNotifications` aggressiveness** — keep the `RemoveAllDeliveredNotifications` + badge reset (it's the user‑friendly choice), or revert to the original's `RemoveAllPendingNotificationRequests`‑only semantics. Document either way. (10.5.5.)
+15. **Move static `App.GetService<T>()` calls to constructor‑injected views** registered through `ViewMap<TPage, TViewModel>` so DI is honoured by the navigation framework rather than punched through with a service locator. (10.8.8.)
+16. **Add `InitializeComponent` ordering and `Loaded`/`Unloaded` symmetry** on every page (set `IsActive = true` in `Loaded`, `false` in `Unloaded`) to match Xamarin's `OnAppearing`/`OnDisappearing` discipline. (10.1.5, 10.2.2, 10.3.1.)
+17. **Delete the unused `Resources/PluralityConverter` from `DailyReflectionPage` and the dead `OnUnloaded` handler from `SobrietyTimePage`.** (10.1.10, 10.2.6.)
+18. **Either remove the unused converters in App.xaml** (`InverseBoolConverter`, `InverseBoolToVisibilityConverter`, `AllFalseBoolToVisibilityConverter`, `HasValueConverter`) **or actually use them** (e.g., `AllFalseBoolToVisibilityConverter` could replace the `ShowContent` helper on `DailyReflectionPage`). (10.10.5.)
+19. **Bump tests to net10.0** and add at minimum smoke tests for the WeakReferenceMessenger registrations and `SettingsService` round‑trip. (10.11.3.)
+20. **Document the bundle id change** (`com.kazo0.dailyreflectionuno`) so it is not accidentally reverted to the Xamarin id. If the intent is *replacement* on the App/Play Store, change to `com.kazo0.dailyreflection`; if the intent is *coexistence* during pilot, keep the suffix and add it to the README. (10.9.1.)
+
+The 🔴 items (10.1.1, 10.1.2, 10.2.1, 10.3.1, 10.3.2, 10.3.3, 10.5.1‑3, 10.6.1‑2, 10.7.1‑2, 10.8.1‑3, 10.10.1) are the load‑bearing parity blockers — fix these first.
+
+---
+
 *Report generated by reading the three implementations directly and cross‑checking with `heads/DailyReflection.Uno/genlog.md`. The Avalonia head was not analysed.*

@@ -10,7 +10,7 @@
 	  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	  xmlns:uen="using:Uno.Extensions.Navigation.UI"
 	  xmlns:utu="using:Uno.Toolkit.UI"
-	  Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+	  >
 
 	<Grid uen:Region.Attached="True"
 		  RowDefinitions="*,Auto"
@@ -22,25 +22,34 @@
 			  uen:Region.Attached="True"
 			  uen:Region.Navigator="Visibility" />
 
-		<!-- Bottom TabBar - each item's Region.Name corresponds to a nested route. -->
+		<!--
+			Bottom TabBar - each item's Region.Name corresponds to a nested route.
+			Spec 004 §C: tab bar chrome (background, selected blue, unselected gray)
+			is sourced from the theme-aware DR* brushes so it matches the original
+			Xamarin Shell palette under both light and dark themes.
+		-->
 		<utu:TabBar Grid.Row="1"
-					uen:Region.Attached="True">
+					uen:Region.Attached="True"
+					Background="{ThemeResource DRTabBarBackgroundBrush}">
 			<utu:TabBarItem uen:Region.Name="Reflection"
-							Content="Reflection">
+							Content="Reflection"
+							AutomationProperties.AutomationId="Reflection">
 				<utu:TabBarItem.Icon>
 					<FontIcon FontFamily="{StaticResource FontAwesomeSolid}"
 							  Glyph="&#xf02d;" />
 				</utu:TabBarItem.Icon>
 			</utu:TabBarItem>
 			<utu:TabBarItem uen:Region.Name="SoberTime"
-							Content="Sober Time">
+							Content="Sober Time"
+							AutomationProperties.AutomationId="Sober Time">
 				<utu:TabBarItem.Icon>
 					<FontIcon FontFamily="{StaticResource FontAwesomeRegular}"
 							  Glyph="&#xf017;" />
 				</utu:TabBarItem.Icon>
 			</utu:TabBarItem>
 			<utu:TabBarItem uen:Region.Name="Settings"
-							Content="Settings">
+							Content="Settings"
+							AutomationProperties.AutomationId="Settings">
 				<utu:TabBarItem.Icon>
 					<FontIcon FontFamily="{StaticResource FontAwesomeSolid}"
 							  Glyph="&#xf013;" />

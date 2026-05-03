@@ -12,17 +12,20 @@
 	- DatePicker -> CalendarDatePicker
 	- TimePicker -> TimePicker
 -->
-<Page x:Class="DailyReflection.Views.SettingsPage"
+<views:PageBase x:Class="DailyReflection.Views.SettingsPage"
 	  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	  xmlns:converters="using:DailyReflection.Converters"
 	  xmlns:vm="using:DailyReflection.Presentation.ViewModels"
-	  Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+	  xmlns:views="using:DailyReflection.Views"
+	  AutomationProperties.AutomationId="settings_view"
+	  >
 
-	<Page.Resources>
-		<converters:DateTimeToTimeSpanConverter x:Key="DateTimeToTimeSpan" />
-		<converters:SoberTimeDisplayEnumConverter x:Key="SoberTimeDisplayEnumConverter" />
-	</Page.Resources>
+	<!--
+		Page-local converter resources removed in spec 011 — they were declared
+		but never bound. SoberTimeDisplayEnumConverter is now resolved against
+		the App-level resource declared in App.xaml.
+	-->
 
 	<Grid>
 		<Grid.RowDefinitions>
@@ -59,15 +62,29 @@
 						   Style="{StaticResource BodyTextStyle}" />
 				<ToggleSwitch Grid.Column="1"
 							  IsOn="{x:Bind ViewModel.NotificationsEnabled, Mode=TwoWay}"
+							  IsEnabled="{x:Bind ViewModel.NotificationsSupported, Mode=OneWay}"
+							  AutomationProperties.AutomationId="settings_enable_notif_cell"
 							  Margin="0" />
 			</Grid>
 
-			<!-- Notification Time -->
+			<!-- Caption shown only on platforms where notifications cannot fire (spec 002). -->
+			<TextBlock Text="Notifications aren't supported on this platform. The reflection will still load when the app is open."
+					   Style="{StaticResource CaptionTextStyle}"
+					   TextWrapping="Wrap"
+					   Margin="16,0,16,8"
+					   Visibility="{x:Bind ViewModel.NotificationsSupported, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+
+			<!--
+				Notification Time. The Android target uses TimePickerLabelEnabledConverter
+				to keep the row tappable even when notifications are off (matching the
+				Xamarin original); iOS / desktop greys it out.
+			-->
 			<Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
 				  CornerRadius="4"
 				  Padding="16,12"
-				  IsEnabled="{x:Bind ViewModel.NotificationsEnabled, Mode=OneWay}"
-				  Tapped="NotificationTime_Tapped">
+				  IsEnabled="{x:Bind ViewModel.NotificationsEnabled, Mode=OneWay, Converter={StaticResource TimePickerLabelEnabledConverter}}"
+				  Tapped="NotificationTime_Tapped"
+				  AutomationProperties.AutomationId="settings_notification_time">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" />
@@ -90,6 +107,7 @@
 			<!-- Hidden TimePicker (shown as flyout) -->
 			<TimePicker x:Name="NotificationTimePicker"
 						Visibility="Collapsed"
+						AutomationProperties.AutomationId="settings_time_picker"
 						TimeChanged="NotificationTimePicker_TimeChanged" />
 
 			<!-- Sobriety Time Section -->
@@ -101,7 +119,8 @@
 			<Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
 				  CornerRadius="4"
 				  Padding="16,12"
-				  Tapped="SoberDate_Tapped">
+				  Tapped="SoberDate_Tapped"
+				  AutomationProperties.AutomationId="settings_sober_date">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" />
@@ -124,6 +143,7 @@
 			<!-- Hidden CalendarDatePicker (shown as flyout) -->
 			<CalendarDatePicker x:Name="SoberDatePicker"
 								Visibility="Collapsed"
+								AutomationProperties.AutomationId="settings_date_picker"
 								MaxDate="{x:Bind ViewModel.MaxDate, Mode=OneWay}"
 								DateChanged="SoberDatePicker_DateChanged" />
 
@@ -131,7 +151,8 @@
 			<Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
 				  CornerRadius="4"
 				  Padding="16,12"
-				  Tapped="SoberTimeDisplay_Tapped">
+				  Tapped="SoberTimeDisplay_Tapped"
+				  AutomationProperties.AutomationId="settings_sober_time_display">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" />
@@ -183,4 +204,4 @@
 		</StackPanel>
 		</ScrollViewer>
 	</Grid>
-</Page>
+</views:PageBase>

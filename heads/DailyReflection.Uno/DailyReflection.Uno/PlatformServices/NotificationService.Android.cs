@@ -20,6 +20,8 @@ public partial class NotificationService : INotificationService
 
     private const int AlarmId = 10000;
 
+    public bool IsSupported => true;
+
     public async Task<bool> CanScheduleNotifications()
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
@@ -64,6 +66,11 @@ public partial class NotificationService : INotificationService
             return false;
         }
 
+        // Spec 009: SetAndAllowWhileIdle is the right primitive for a once-per-day
+        // reflection. We deliberately do NOT request SCHEDULE_EXACT_ALARM /
+        // USE_EXACT_ALARM:
+        //   - the time is user-chosen at minute granularity, not safety-critical;
+        //   - exact alarms require Play Store policy answers we don't want to maintain.
         if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
         {
             alarmManager.SetAndAllowWhileIdle(AlarmType.RtcWakeup, triggerTime, pendingIntent);

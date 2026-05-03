@@ -13,6 +13,8 @@ public class NotificationService : INotificationService
 {
 	private const int MessageId = 1;
 
+	public bool IsSupported => true;
+
 	public void CancelNotifications()
 	{
 		UNUserNotificationCenter.Current.RemoveAllPendingNotificationRequests();

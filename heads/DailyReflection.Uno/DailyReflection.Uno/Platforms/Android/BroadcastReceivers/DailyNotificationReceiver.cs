@@ -10,9 +10,21 @@ namespace DailyReflection.Uno.Droid.BroadcastReceivers;
 
 /// <summary>
 /// Broadcast receiver that handles the scheduled notification alarm.
-/// Creates and displays the notification when triggered.
+///
+/// Spec 008 alignment notes (vs. the Xamarin original):
+///   10.5.7   SetContentTitle ("Time for the daily reflection!") only — no
+///            SetContentText. Matches the original single-line layout.
+///   10.5.8   No SetPriority — Xamarin relied on the channel/default.
+///   10.5.9   [BroadcastReceiver(Enabled = true)] — Exported left unspecified,
+///            matching the original. The receiver has no intent filter, so
+///            Android's API 31+ rule that exported receivers must have one
+///            doesn't apply.
+///   10.5.10  Pending intent activity flags = ClearTop only.
+///   10.5.12  Reschedule failure throws (no try/catch swallow). Exceptions
+///            surface in logs via the alarm framework.
+///   10.5.13  Channel sound is set so Android 8+ honours channel-level sound.
 /// </summary>
-[BroadcastReceiver(Enabled = true, Exported = false)]
+[BroadcastReceiver(Enabled = true)]
 public class DailyNotificationReceiver : BroadcastReceiver
 {
     private const string ChannelName = "Daily Reflections";
@@ -41,33 +53,30 @@ public class DailyNotificationReceiver : BroadcastReceiver
         _messageId++;
 
         var activityIntent = new Intent(context, typeof(DailyReflection.Uno.Droid.MainActivity));
-        activityIntent.SetFlags(ActivityFlags.ClearTop | ActivityFlags.SingleTop);
+        activityIntent.SetFlags(ActivityFlags.ClearTop); // 10.5.10
         activityIntent.PutExtra(TitleKey, "Time for the daily reflection!");
 
-        PendingIntent? pendingIntent;
         var flags = Build.VERSION.SdkInt >= BuildVersionCodes.S
             ? PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent
             : PendingIntentFlags.UpdateCurrent;
 
-        pendingIntent = PendingIntent.GetActivity(context, PendingIntentId, activityIntent, flags);
+        var pendingIntent = PendingIntent.GetActivity(context, PendingIntentId, activityIntent, flags);
 
         var builder = new NotificationCompat.Builder(context, NotificationService.ChannelId)
             .SetContentIntent(pendingIntent)
-            .SetContentTitle("Daily Reflection")
-            .SetContentText("Time for the daily reflection!")
+            .SetContentTitle("Time for the daily reflection!") // 10.5.7
             .SetSmallIcon(Resource.Drawable.notif_icon)
             .SetSound(RingtoneManager.GetDefaultUri(RingtoneType.Notification))
-            .SetAutoCancel(true)
-            .SetPriority(NotificationCompat.PriorityDefault);
+            .SetAutoCancel(true);
+            // 10.5.8 - no SetPriority
 
         var notification = builder.Build();
         _manager?.Notify(_messageId, notification);
 
-        // Reschedule the next notification
         RescheduleNotification(context);
     }
 
-    private void RescheduleNotification(Context context)
+    private static void RescheduleNotification(Context context)
     {
         var prefs = context.GetSharedPreferences(PreferenceConstants.PreferenceSharedName, FileCreationMode.Private);
         if (prefs == null)
@@ -81,19 +90,14 @@ public class DailyNotificationReceiver : BroadcastReceiver
             return;
         }
 
+        // 10.5.12 - intentionally do not swallow exceptions. Background failures
+        // surface in adb logcat / crash reporting just as the Xamarin original did.
         Task.Run(async () =>
         {
-            try
-            {
-                var notificationService = new NotificationService();
-                await notificationService.TryScheduleDailyNotification(
-                    DateTime.FromBinary(timePref), 
-                    shouldRequestPermission: false);
-            }
-            catch
-            {
-                // Silently fail if rescheduling fails
-            }
+            var notificationService = new NotificationService();
+            await notificationService.TryScheduleDailyNotification(
+                DateTime.FromBinary(timePref),
+                shouldRequestPermission: false);
         });
     }
 
@@ -115,6 +119,12 @@ public class DailyNotificationReceiver : BroadcastReceiver
             };
             channel.EnableLights(true);
             channel.EnableVibration(true);
+            channel.SetSound(   // 10.5.13
+                RingtoneManager.GetDefaultUri(RingtoneType.Notification),
+                new AudioAttributes.Builder()
+                    .SetUsage(AudioUsageKind.Notification)!
+                    .SetContentType(AudioContentType.Sonification)!
+                    .Build());
 
             _manager.CreateNotificationChannel(channel);
         }

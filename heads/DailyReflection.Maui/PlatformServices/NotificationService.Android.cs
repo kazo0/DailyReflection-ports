@@ -16,6 +16,8 @@ public class NotificationService : INotificationService
 
 	private const int AlarmId = 10000;
 
+	public bool IsSupported => true;
+
 	public async Task<bool> CanScheduleNotifications()
 		=> await Permissions.CheckStatusAsync<Permissions.PostNotifications>() == PermissionStatus.Granted;
 

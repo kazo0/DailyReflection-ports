@@ -14,11 +14,16 @@
 			<string>armv7</string>
 			<string>arm64</string>
 		</array>
+
+		<!--
+			Spec 010 — restore Xamarin orientations.
+			iPhone: portrait + portrait-upside-down only (no landscape).
+			iPad: all four orientations.
+		-->
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
+			<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		</array>
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
@@ -27,6 +32,7 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
 		<key>XSAppIconAssets</key>
@@ -39,6 +45,28 @@
 			<string>FontAwesomeRegular.otf</string>
 			<string>FontAwesomeBrands.otf</string>
 		</array>
+
+		<!--
+			Spec 010 §B — explicit minimum OS, both here and in the csproj's
+			SupportedOSPlatformVersion. Modern Uno requires iOS 15 baseline.
+		-->
+		<key>MinimumOSVersion</key>
+		<string>15.0</string>
+
+		<!--
+			Spec 010 §E — bundle keys substituted from the csproj at build time
+			so plist-scraping tools see the same values as the bundle metadata.
+		-->
+		<key>CFBundleIdentifier</key>
+		<string>$(ApplicationId)</string>
+		<key>CFBundleShortVersionString</key>
+		<string>$(ApplicationDisplayVersion)</string>
+		<key>CFBundleVersion</key>
+		<string>$(ApplicationVersion)</string>
+		<key>CFBundleName</key>
+		<string>$(ApplicationTitle)</string>
+		<key>CFBundleDisplayName</key>
+		<string>$(ApplicationTitle)</string>
 
 		<!--
 		Adjust this to your application's encryption usage.

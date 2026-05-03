@@ -8,6 +8,35 @@
 	<!-- Page/Content Background -->
 	<StaticResource x:Key="PageBackgroundBrush" ResourceKey="Gray100Brush" />
 
+	<!--
+		Implicit Page style (spec 004 §B). Restores the original Xamarin
+		palette (BackgroundColorLight/Dark) without each page having to set
+		Background explicitly.
+	-->
+	<Style TargetType="Page">
+		<Setter Property="Background" Value="{ThemeResource DRPageBackgroundBrush}" />
+	</Style>
+
+	<!--
+		Implicit TextBlock style. Provides the original TextPrimaryColor
+		under both themes, so plain TextBlocks get the right Foreground
+		without each consumer specifying it.
+	-->
+	<Style TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{ThemeResource DRTextPrimaryBrush}" />
+	</Style>
+
+	<!--
+		Implicit CommandBar style. Background / Foreground are populated by
+		App.ApplyCommandBarChrome() at runtime so the values can branch on
+		OS (Android = primary blue, iOS = page background + iOS blue, desktop
+		= page background + primary text). DR* keys live in App resources.
+	-->
+	<Style TargetType="CommandBar">
+		<Setter Property="Background" Value="{ThemeResource DRCommandBarBackgroundBrush}" />
+		<Setter Property="Foreground" Value="{ThemeResource DRCommandBarForegroundBrush}" />
+	</Style>
+
 	<!-- Title Style -->
 	<Style x:Key="TitleTextStyle"
 		   TargetType="TextBlock">

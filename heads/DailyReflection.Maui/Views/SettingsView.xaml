@@ -39,7 +39,7 @@
                                                        Date="{Binding SoberDate, Mode=TwoWay}"
                                                        MaximumDate="{Binding MaxDate}" />
                         </ViewCell>
-                        <TextCell AutomationId="{x:Static constants:AutomationConstants.Settings_Notification_Time}"
+                        <TextCell AutomationId="{x:Static constants:AutomationConstants.Settings_Sober_Time_Display}"
                                   Detail="{Binding SoberTimeDisplayPreference, Converter={StaticResource SoberTimeDisplayEnumConverter}, Mode=OneWay}"
                                   Tapped="SoberTimeDisplay_Tapped"
                                   Text="Sober Time Display"

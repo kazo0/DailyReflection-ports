@@ -1,37 +1,27 @@
 using DailyReflection.Presentation.ViewModels;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
+using System;
 
 namespace DailyReflection.Views;
 
 /// <summary>
 /// Page displaying sobriety time information.
-/// Migrated from MAUI SobrietyTimeView.
+/// Lifecycle / VM activation are owned by <see cref="PageBase"/>.
 /// </summary>
-public sealed partial class SobrietyTimePage : Page
+public sealed partial class SobrietyTimePage : PageBase
 {
     public SobrietyTimeViewModel ViewModel { get; }
+    protected override ViewModelBase ActiveViewModel => ViewModel;
 
     public SobrietyTimePage()
     {
         ViewModel = App.GetService<SobrietyTimeViewModel>();
+        DataContext = ViewModel;
         this.InitializeComponent();
-        ViewModel.IsActive = true;
-        this.DataContext = ViewModel;
-
-        Unloaded += OnUnloaded;
-    }
-
-    private void OnUnloaded(object sender, RoutedEventArgs e)
-    {
     }
 
     /// <summary>
     /// Format the sober date for display.
-    /// Replaces MAUI StringFormat binding.
     /// </summary>
     public string FormatSoberDate(DateTime? date)
-    {
-        return date?.ToString("MMM d, yyyy") ?? string.Empty;
-    }
+        => date?.ToString("MMM d, yyyy") ?? string.Empty;
 }

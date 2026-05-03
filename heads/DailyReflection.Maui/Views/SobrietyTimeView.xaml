@@ -27,6 +27,7 @@
 	<ScrollView>
 		<Grid RowDefinitions="20, Auto, *, Auto, Auto, *, Auto">
 			<Grid Grid.Row="1"
+				  AutomationId="{x:Static constants:AutomationConstants.ST_Sober_Date_Display}"
 				  IsVisible="{Binding SoberDate, Converter={StaticResource NullToBoolConverter}}"
 				  RowDefinitions="Auto, Auto">
 				<Label FontFamily="FaRegularFont"

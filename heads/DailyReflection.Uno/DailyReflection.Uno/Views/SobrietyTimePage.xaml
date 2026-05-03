@@ -12,13 +12,15 @@
 	- StringFormat removed (use Run elements or code functions)
 	- x:Static -> x:Bind to static properties
 -->
-<Page x:Class="DailyReflection.Views.SobrietyTimePage"
+<views:PageBase x:Class="DailyReflection.Views.SobrietyTimePage"
 	  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	  xmlns:converters="using:DailyReflection.Converters"
 	  xmlns:models="using:DailyReflection.Data.Models"
 	  xmlns:vm="using:DailyReflection.Presentation.ViewModels"
-	  Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+	  xmlns:views="using:DailyReflection.Views"
+	  AutomationProperties.AutomationId="sobriety_time_view"
+	  >
 
 	<Page.Resources>
 		<converters:PluralityConverter x:Key="YearsPluralityConverter"
@@ -30,10 +32,16 @@
 		<converters:PluralityConverter x:Key="DaysPluralityConverter"
 									   PluralValue="Days"
 									   SingularValue="Day" />
+		<!--
+			Spec 006 §D — typed enum parameter. WinUI's XAML enum parser binds
+			the string "DaysMonthsYears" to the SoberTimeDisplayPreference value
+			directly, so we no longer go through the DisplayPreferenceString
+			indirection that bypassed compile-time checks.
+		-->
 		<converters:IsDisplayPreferenceToBoolConverter x:Key="IsDaysMonthsYearsDisplayPreferenceConverter"
-													   DisplayPreferenceString="DaysMonthsYears" />
+													   DisplayPreference="DaysMonthsYears" />
 		<converters:IsDisplayPreferenceToBoolConverter x:Key="IsDaysOnlyDisplayPreferenceConverter"
-													   DisplayPreferenceString="DaysOnly" />
+													   DisplayPreference="DaysOnly" />
 	</Page.Resources>
 
 	<Grid>
@@ -62,7 +70,8 @@
 
 			<!-- Sober Date Display -->
 			<Grid Grid.Row="1"
-				  Visibility="{x:Bind ViewModel.SoberDate, Mode=OneWay, Converter={StaticResource NullToBoolConverter}}">
+				  Visibility="{x:Bind ViewModel.SoberDate, Mode=OneWay, Converter={StaticResource NullToBoolConverter}}"
+				  AutomationProperties.AutomationId="sober_date_display">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -159,8 +168,9 @@
 					   Style="{StaticResource SubtitleTextStyle}"
 					   FontStyle="Italic"
 					   HorizontalAlignment="Center"
-					   Text="One day at a time" />
+					   Text="One day at a time"
+					   AutomationProperties.AutomationId="sober_one_day" />
 		</Grid>
 		</ScrollViewer>
 	</Grid>
-</Page>
+</views:PageBase>

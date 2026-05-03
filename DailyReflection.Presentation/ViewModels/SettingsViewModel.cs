@@ -7,7 +7,6 @@ using DailyReflection.Services.Notification;
 using DailyReflection.Services.Settings;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -31,7 +30,14 @@ public partial class SettingsViewModel : ViewModelBase
 	[ObservableProperty]
 	private SoberTimeDisplayPreference _soberTimeDisplayPreference;
 
-	public DateTimeOffset MaxDate => DateTimeOffset.Now.Date;
+	public DateTime MaxDate => DateTime.Today;
+
+	/// <summary>
+	/// Whether the running platform can fire local notifications. Bound to
+	/// <c>ToggleSwitch.IsEnabled</c> in <c>SettingsPage.xaml</c> so unsupported
+	/// platforms (today: Skia macOS / Linux desktop) cannot toggle the feature on.
+	/// </summary>
+	public bool NotificationsSupported => _notificationService.IsSupported;
 
 	public List<SoberTimeDisplayPreference> AllSoberTimeDisplayPreferences => Enum.GetValues(typeof(SoberTimeDisplayPreference)).Cast<SoberTimeDisplayPreference>().ToList();
 
@@ -48,25 +54,11 @@ public partial class SettingsViewModel : ViewModelBase
 		_soberTimeDisplayPreference = (SoberTimeDisplayPreference)_settingsService.Get(PreferenceConstants.SoberTimeDisplay, 0);
 	}
 
-	protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+	private async Task UpdateNotifications(bool enabled, DateTime time)
 	{
-		base.OnPropertyChanged(e);
-
-		if (e.PropertyName == nameof(NotificationsEnabled))
+		if (enabled)
 		{
-			Task.Run(UpdateNotifications);
-		}
-		else if (e.PropertyName == nameof(NotificationTime))
-		{
-			Task.Run(UpdateNotifications);
-		}
-	}
-
-	private async Task UpdateNotifications()
-	{
-		if (NotificationsEnabled)
-		{
-			await _notificationService.TryScheduleDailyNotification(NotificationTime);
+			await _notificationService.TryScheduleDailyNotification(time);
 		}
 		else
 		{
@@ -76,12 +68,22 @@ public partial class SettingsViewModel : ViewModelBase
 
 	partial void OnNotificationsEnabledChanged(bool value)
 	{
-		Task.Run(UpdateNotifications);
+		// Guard: never persist NotificationsEnabled = true on a platform where
+		// notifications cannot fire. Forces the toggle back to false.
+		if (value && !NotificationsSupported)
+		{
+			SetProperty(ref _notificationsEnabled, false, nameof(NotificationsEnabled));
+			return;
+		}
+
+		_settingsService.Set(PreferenceConstants.NotificationsEnabled, value);
+		_ = UpdateNotifications(value, NotificationTime);
 	}
 
 	partial void OnNotificationTimeChanged(DateTime value)
 	{
-		Task.Run(UpdateNotifications);
+		_settingsService.Set(PreferenceConstants.NotificationTime, value);
+		_ = UpdateNotifications(NotificationsEnabled, value);
 	}
 
 	partial void OnSoberDateChanged(DateTime oldValue, DateTime newValue)

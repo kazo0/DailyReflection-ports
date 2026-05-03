@@ -63,4 +63,38 @@
 	<SolidColorBrush x:Key="TextPrimaryBrushLight"
 					 Color="{StaticResource TextPrimaryColorLight}" />
 
+	<!--
+		Theme-aware bridge brushes (spec 004 §A).
+		These restore the page / text / tab-bar palette from the Xamarin
+		original (Background #EFF2F5 / #121212, Text #323130 / #FFFFFF, primary
+		blue #1976D2). Implicit styles in Styles.xaml + TabBar overrides in
+		MainPage.xaml + CommandBar overrides in App.OnLaunched consume them.
+	-->
+	<ResourceDictionary.ThemeDictionaries>
+		<ResourceDictionary x:Key="Light">
+			<SolidColorBrush x:Key="DRPageBackgroundBrush"
+							 Color="#EFF2F5" />
+			<SolidColorBrush x:Key="DRTextPrimaryBrush"
+							 Color="#323130" />
+			<SolidColorBrush x:Key="DRTabBarBackgroundBrush"
+							 Color="#FFFFFF" />
+			<SolidColorBrush x:Key="DRTabBarSelectedBrush"
+							 Color="{StaticResource Primary}" />
+			<SolidColorBrush x:Key="DRTabBarUnselectedBrush"
+							 Color="#6E6E6E" />
+		</ResourceDictionary>
+		<ResourceDictionary x:Key="Dark">
+			<SolidColorBrush x:Key="DRPageBackgroundBrush"
+							 Color="#121212" />
+			<SolidColorBrush x:Key="DRTextPrimaryBrush"
+							 Color="#FFFFFF" />
+			<SolidColorBrush x:Key="DRTabBarBackgroundBrush"
+							 Color="#121212" />
+			<SolidColorBrush x:Key="DRTabBarSelectedBrush"
+							 Color="{StaticResource Primary}" />
+			<SolidColorBrush x:Key="DRTabBarUnselectedBrush"
+							 Color="#C8C8C8" />
+		</ResourceDictionary>
+	</ResourceDictionary.ThemeDictionaries>
+
 </ResourceDictionary>

@@ -28,5 +28,8 @@ public static class AutomationConstants
 	public const string Settings_Date_Picker = "settings_date_picker";
 	public const string Settings_Notification_Time = "settings_notification_time";
 	public const string Settings_Sober_Date = "settings_sober_date";
+	public const string Settings_Sober_Time_Display = "settings_sober_time_display";
 
+	// Sobriety Time — calendar block
+	public const string ST_Sober_Date_Display = "sober_date_display";
 }
