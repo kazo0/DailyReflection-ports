@@ -40,7 +40,7 @@ public partial class App : Application
 
     protected Window? MainWindow { get; private set; }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         var builder = this.CreateBuilder(args)
             .UseToolkitNavigation()
@@ -60,12 +60,10 @@ public partial class App : Application
                 .UseNavigation(RegisterRoutes));
 
         MainWindow = builder.Window;
-#if DEBUG
-        MainWindow.UseStudio();
-#endif
+
         MainWindow.SetWindowIcon();
 
-        Host = builder.Build();
+         Host = await builder.NavigateAsync<MainPage>();
     }
 
     private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
