@@ -160,7 +160,7 @@ public partial class App : Application
             new ViewMap<SettingsPage, SettingsViewModel>());
 
         routes.Register(
-            new RouteMap("", View: views.FindByView<MainPage>(),
+            new RouteMap("Main", View: views.FindByView<MainPage>(), IsDefault: true,
                 Nested:
                 [
                     new RouteMap("Reflection", View: views.FindByViewModel<DailyReflectionViewModel>(), IsDefault: true),
